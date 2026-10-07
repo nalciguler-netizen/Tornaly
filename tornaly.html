@@ -75,6 +75,7 @@ section.view.on{display:block}
 .seg button:first-child{border-left:0}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 .seg.two{grid-template-columns:1fr 1fr}
+.seg.two:has(button:nth-child(3)){grid-template-columns:repeat(3,1fr)}
 
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
 .grid>*{min-width:0}
@@ -134,12 +135,18 @@ th{font-weight:600;font-size:.88rem;color:var(--muted)}
 .hist{list-style:none;padding:0;margin:0}
 .hist li{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);padding:12px;margin:8px 0;display:flex;justify-content:space-between;gap:10px;align-items:center}
 .hist b{font-family:var(--cond);font-size:1.15rem}
+.qsteps{display:grid;gap:8px;margin-top:8px}
+.qstep{display:grid;grid-template-columns:2.2em 1fr 1fr 2.6em;gap:8px;align-items:end}
+.qstep b{font-family:var(--cond);font-size:1.1rem;padding-bottom:10px}
+.qstep .btn{padding:9px 0}
 .matTable input{width:100%;min-width:60px;border:1px solid var(--line);border-radius:4px;background:var(--paper);padding:5px 6px;text-align:right}
 .matTable td:first-child{min-width:130px}
 details{border-top:1px solid var(--line);padding:10px 0}
 details summary{cursor:pointer;font-weight:600}
 .toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:var(--r-s);font-weight:500;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 .toast.on{opacity:1}
+.askbg{position:fixed;inset:0;z-index:10;background:rgba(10,15,18,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.ask{background:var(--surface);color:var(--ink);border-radius:var(--r-m);padding:18px;max-width:360px;width:100%}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 
 @media print{
@@ -159,17 +166,31 @@ details summary{cursor:pointer;font-weight:600}
 <!-- ================= HESAP ================= -->
 <section class="view on" id="v-hesap">
   <h2>Parça</h2>
-  <div class="row">
-    <label class="btn main file">DXF dosyası seç<input type="file" id="dxfIn" accept=".dxf,application/dxf,image/vnd.dxf,text/plain"></label>
-    <select id="sampleSel" class="btn ghost" aria-label="Örnek çizim">
-      <option value="">Örnek çizim aç</option>
-      <option value="braket">Sac braket</option>
-      <option value="flans">Flanş</option>
-      <option value="mil">Kademeli mil</option>
-    </select>
+  <div class="seg two" id="srcSeg" role="group" aria-label="Parça kaynağı">
+    <button data-s="file" aria-pressed="true">Çizim dosyası</button>
+    <button data-s="quick" aria-pressed="false">Hızlı parça</button>
   </div>
-  <p class="note">AutoCAD'de çizimi Farklı Kaydet ile DXF olarak kaydedin. Bloklar varsa önce PATLAT (EXPLODE) komutunu kullanın. Çiziminiz bu cihazdan dışarı gönderilmez.</p>
+  <div id="srcFile" style="margin-top:12px">
+    <div class="row">
+      <label class="btn main file">Çizim seç (DXF, SVG)<input type="file" id="dxfIn"></label>
+      <select id="sampleSel" class="btn ghost" aria-label="Örnek çizim">
+        <option value="">Örnek çizim aç</option>
+        <option value="braket">Sac braket</option>
+        <option value="flans">Flanş</option>
+        <option value="mil">Kademeli mil</option>
+      </select>
+    </div>
+    <p class="note">AutoCAD'den Farklı Kaydet ile DXF, Inkscape, LibreCAD veya CAM programlarından SVG olarak kaydedin. Bloklar varsa önce PATLAT (EXPLODE) komutunu kullanın. Çiziminiz bu cihazdan dışarı gönderilmez.</p>
+  </div>
+  <div id="srcQuick" style="margin-top:12px" hidden>
+    <p class="note" style="margin-top:0">Çizim olmadan ölçüleri girin; yaklaşık teklif için yeterlidir.</p>
+    <div id="quickForm"></div>
+  </div>
   <div id="fileInfo" class="msgs"></div>
+  <div id="scaleBox" class="block" hidden>
+    <label class="f"><span>Ölçü kontrolü: parçanın gerçek genişliği</span><div class="in"><input type="number" inputmode="decimal" id="scaleW"><em>mm</em></div></label>
+    <small>Okunan genişlik yanlışsa (birim farkı gibi) doğrusunu yazın, çizim buna göre ölçeklenir.</small>
+  </div>
   <div id="layerBox" class="block" hidden>
     <b>Katmanlar</b> <small>Ölçü, eksen ve yazı katmanlarını kapatın.</small>
     <div class="layers" id="layers"></div>
@@ -283,7 +304,7 @@ details summary{cursor:pointer;font-weight:600}
   <details><summary>Gizlilik</summary>
     <p>Çizimleriniz, atölye bilgileriniz ve teklifleriniz yalnızca bu cihazdaki tarayıcı hafızasında saklanır. Hiçbir sunucuya gönderilmez, üçüncü kişilerle paylaşılmaz. Tarayıcı verilerini sildiğinizde kayıtlar da silinir.</p>
   </details>
-  <p class="note">Tornaly sürüm 1.0</p>
+  <p class="note">Tornaly sürüm 1.1</p>
 </section>
 </main>
 
@@ -294,6 +315,7 @@ details summary{cursor:pointer;font-weight:600}
   <button role="tab" data-v="ayar" aria-selected="false">Ayarlar</button>
 </div></nav>
 <div class="toast" id="toast" role="status"></div>
+<div class="askbg" id="askBox" hidden><div class="ask" role="dialog" aria-modal="true" aria-labelledby="askMsg"><p id="askMsg"></p><div class="row" style="justify-content:flex-end"><button class="btn ghost" id="askNo">Vazgeç</button><button class="btn main" id="askYes">Evet</button></div></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -547,7 +569,7 @@ const Core = (() => {
     const rot = pts => vertical ? pts.map(([x, y]) => [y, x]) : pts;
     const outer = rot(part.outer), holes = part.holes.map(rot);
     const bb = bbox(outer);
-    const ax = axisMode === 'alt' ? bb.y0 : (bb.y0 + bb.y1) / 2;
+    const ax = axisMode === 'alt' ? bb.y0 : axisMode === 'orijin' ? 0 : (bb.y0 + bb.y1) / 2;
     const moment = poly => {
       let q = 0;
       for (let i = 0, n = poly.length; i < n; i++) {
@@ -766,7 +788,14 @@ prof.rates = { ...DEF_PROF.rates, ...prof.rates };
 
 const state = {
   proc: 'sac', params: clone(DEF_PARAMS), mat: { sac: 'st37', torna: 'c45', freze: 'al6061', dokum: 'gg25' },
-  pieces: null, layerOn: {}, part: null, geo: null, res: null, fileName: '', msgs: [], geoSig: ''
+  pieces: null, layerOn: {}, part: null, geo: null, res: null, fileName: '', msgs: [], geoSig: '',
+  src: 'file', scale: 1, fileMsgs: [],
+  quick: {
+    shape: 'plaka',
+    plaka: { w: 200, h: 100, r: 5, holeD: 12, holeN: 4, midD: 0 },
+    flans: { D: 200, d: 60, bcd: 160, boltD: 14, boltN: 6, t: 20 },
+    mil: { bore: 0, steps: [{ d: 50, l: 40 }, { d: 40, l: 80 }, { d: 30, l: 50 }] }
+  }
 };
 
 /* ---------- Toast ---------- */
@@ -788,7 +817,7 @@ function showView(v) {
 $('#dxfIn').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
   const r = new FileReader();
-  r.onload = () => loadDXF(r.result, f.name);
+  r.onload = () => loadFile(r.result, f.name);
   r.onerror = () => showMsgs([['err', 'Dosya okunamadı. Tekrar seçin.']]);
   r.readAsText(f);
   e.target.value = '';
@@ -796,26 +825,109 @@ $('#dxfIn').onchange = e => {
 $('#sampleSel').onchange = e => {
   const k = e.target.value; if (!k) return;
   e.target.value = '';
+  setSrc('file', true);
   const proc = { braket: 'sac', flans: 'dokum', mil: 'torna' }[k];
   if (k === 'flans') state.params.dokum.shape = 'ext';
+  if (k === 'mil') state.params.torna.axis = 'orta';
   setProc(proc, true);
   loadDXF(Core.samples[k](), { braket: 'Örnek sac braket', flans: 'Örnek flanş', mil: 'Örnek kademeli mil' }[k]);
 };
 
+function loadFile(text, name) {
+  setSrc('file', true);
+  const head = text.slice(0, 400).trimStart(), low = name.toLowerCase();
+  if (/^AC10\d\d/.test(head) || low.endsWith('.dwg'))
+    return failLoad('DWG dosyası doğrudan okunamıyor. AutoCAD\'de Farklı Kaydet ile "DXF" türünü seçip tekrar kaydedin.');
+  if (low.endsWith('.stl') || low.endsWith('.step') || low.endsWith('.stp') || /^solid\s/.test(head) || head.startsWith('ISO-10303'))
+    return failLoad('3B dosyalar (STL, STEP) bu sürümde okunmuyor. Parçanın 2B görünüşünü DXF veya SVG olarak kaydedin ya da Hızlı parça ile ölçüleri girin.');
+  if (low.endsWith('.pdf') || head.startsWith('%PDF'))
+    return failLoad('PDF çizimler okunmuyor. Çizim programından DXF veya SVG olarak kaydedin.');
+  if (low.endsWith('.svg') || head.startsWith('<'))
+    return loadSVG(text, name);
+  loadDXF(text, name);
+}
+function failLoad(msg) { state.pieces = null; state.part = null; $('#layerBox').hidden = true; $('#scaleBox').hidden = true; showMsgs([['err', msg]]); recompute(); }
+
 function loadDXF(text, name) {
+  try { usePieces(Core.parseDXF(text), name.replace(/\.dxf$/i, ''), []); }
+  catch (err) { failLoad(err.message); }
+}
+function loadSVG(text, name) {
+  try { const d = parseSVG(text); usePieces(d, name.replace(/\.svg$/i, ''), d.notes); }
+  catch (err) { failLoad(err.message); }
+}
+function usePieces(d, name, notes) {
+  state.pieces = d.pieces; state.fileName = name; state.skipped = d.skipped || {}; state.scale = 1; state.fileMsgs = notes || [];
+  state.layerOn = {};
+  d.layers.forEach(l => state.layerOn[l] = !/^(dim|ölçü|olcu|olçu|text|yaz|eksen|center|axis|hatch|tarama|defpoints)/i.test(l));
+  if (!Object.values(state.layerOn).some(Boolean)) d.layers.forEach(l => state.layerOn[l] = true);
+  renderLayers();
+  rebuildPart();
+  setPartName(state.fileName);
+}
+function setPartName(n) {
+  if (!$('#qPart').value || $('#qPart').value === state.autoName) { $('#qPart').value = n; state.autoName = n; }
+}
+
+/* ---------- SVG okuma (tarayıcının kendi yol hesabıyla) ---------- */
+function parseSVG(text) {
+  const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+  const root = doc.documentElement;
+  if (!root || root.nodeName.toLowerCase() !== 'svg' || doc.querySelector('parsererror')) throw new Error('SVG dosyası okunamadı. Dosyanın bozuk olmadığından emin olun.');
+  const host = document.createElement('div');
+  host.style.cssText = 'position:absolute;left:-100000px;top:0;visibility:hidden;pointer-events:none';
+  const svg = document.importNode(root, true);
+  host.appendChild(svg); document.body.appendChild(host);
   try {
-    const d = Core.parseDXF(text);
-    state.pieces = d.pieces; state.fileName = name.replace(/\.dxf$/i, '');
-    state.skipped = d.skipped;
-    state.layerOn = {};
-    d.layers.forEach(l => state.layerOn[l] = !/^(dim|ölçü|olcu|olçu|text|yaz|eksen|center|axis|hatch|tarama|defpoints)/i.test(l));
-    if (!Object.values(state.layerOn).some(Boolean)) d.layers.forEach(l => state.layerOn[l] = true);
-    renderLayers();
-    rebuildPart();
-    if (!$('#qPart').value || $('#qPart').value === state.autoName) { $('#qPart').value = state.fileName; state.autoName = state.fileName; }
-  } catch (err) {
-    state.part = null; showMsgs([['err', err.message]]); recompute();
-  }
+    const toMm = { mm: 1, cm: 10, in: 25.4, pt: 25.4 / 72, pc: 25.4 / 6, px: 25.4 / 96 };
+    const m = /^\s*([\d.]+)\s*(mm|cm|in|pt|pc|px)?\s*$/i.exec(root.getAttribute('width') || '');
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    let scale = 1; const notes = [];
+    if (m && m[2]) scale = (vb && vb.width) ? parseFloat(m[1]) * toMm[m[2].toLowerCase()] / vb.width : toMm[m[2].toLowerCase()];
+    else notes.push(['warn', 'SVG dosyasında ölçü birimi yok; 1 birim = 1 mm kabul edildi. Genişlik yanlışsa aşağıdaki ölçü kontrolünden düzeltin.']);
+    const rootM = svg.getScreenCTM();
+    if (!rootM) throw new Error('SVG çizimi işlenemedi.');
+    const inv = rootM.inverse();
+    const pieces = [], layers = new Set(), skipped = {};
+    const layerOf = el => { const g = el.closest('g[inkscape\\:label], g[id]'); return g ? (g.getAttribute('inkscape:label') || g.id) : 'SVG'; };
+    svg.querySelectorAll('use').forEach(() => skipped.USE = (skipped.USE || 0) + 1);
+    svg.querySelectorAll('path,line,polyline,polygon,rect,circle,ellipse').forEach(el => {
+      if (el.closest('defs,clipPath,mask,symbol,pattern,marker')) return;
+      const sm = el.getScreenCTM(); if (!sm) return;
+      const M = inv.multiply(sm);
+      const tp = (x, y) => [(M.a * x + M.c * y + M.e) * scale, -(M.b * x + M.d * y + M.f) * scale];
+      const tag = el.tagName.toLowerCase(), layer = layerOf(el);
+      const add = (pts, closed) => { if (pts.length > 1) { layers.add(layer); pieces.push({ layer, pts, closed }); } };
+      if (tag === 'line') return add([tp(el.x1.baseVal.value, el.y1.baseVal.value), tp(el.x2.baseVal.value, el.y2.baseVal.value)], false);
+      if (tag === 'polyline' || tag === 'polygon') return add(Array.from(el.points).map(p => tp(p.x, p.y)), tag === 'polygon');
+      if (tag === 'rect' && !el.rx.baseVal.value && !el.ry.baseVal.value) {
+        const x = el.x.baseVal.value, y = el.y.baseVal.value, w = el.width.baseVal.value, h = el.height.baseVal.value;
+        if (w > 0 && h > 0) add([tp(x, y), tp(x + w, y), tp(x + w, y + h), tp(x, y + h)], true);
+        return;
+      }
+      let L = 0; try { L = el.getTotalLength(); } catch { return; }
+      if (!(L > 0)) return;
+      const n = Math.min(5000, Math.max(36, Math.ceil(L * scale / 0.4))), s = L / n;
+      let cur = [], raw = [], prev = null;
+      const flush = () => {
+        if (raw.length > 3) {
+          const f = raw[0], l = raw[raw.length - 1];
+          if (Math.hypot(f.x - l.x, f.y - l.y) < 2.5 * s) { if (Math.hypot(f.x - l.x, f.y - l.y) < 1e-6) cur.pop(); add(cur, true); }
+          else add(cur, false);
+        } else add(cur, false);
+        cur = []; raw = [];
+      };
+      for (let i = 0; i <= n; i++) {
+        const p = el.getPointAtLength(Math.min(L, i * s));
+        if (prev && Math.hypot(p.x - prev.x, p.y - prev.y) > 3 * s) flush();
+        cur.push(tp(p.x, p.y)); raw.push(p); prev = p;
+      }
+      flush();
+    });
+    if (!pieces.length) throw new Error('SVG içinde çizgi bulunamadı. Yazılar eğriye çevrilmemiş ya da çizim resim olarak gömülmüş olabilir.');
+    if (skipped.USE) notes.push(['warn', `${skipped.USE} kopya (use) öğesi okunmadı. Çizim programında bunları normal nesneye çevirin.`]);
+    return { pieces, layers: [...layers], skipped: {}, notes };
+  } finally { host.remove(); }
 }
 
 function renderLayers() {
@@ -827,7 +939,8 @@ function renderLayers() {
 
 function rebuildPart() {
   const msgs = [];
-  const pcs = state.pieces.filter(p => state.layerOn[p.layer]);
+  const k = state.scale;
+  const pcs = state.pieces.filter(p => state.layerOn[p.layer]).map(p => k === 1 ? p : { ...p, pts: p.pts.map(([x, y]) => [x * k, y * k]) });
   try {
     let all = []; pcs.forEach(p => all = all.concat(p.pts.length > 200 ? p.pts.filter((_, i) => i % 10 === 0) : p.pts));
     if (!all.length) throw new Error('Seçili katmanlarda çizim yok.');
@@ -842,12 +955,133 @@ function rebuildPart() {
   const sk = state.skipped || {};
   if (sk.INSERT) msgs.push(['warn', `${sk.INSERT} blok (INSERT) okunmadı. AutoCAD'de PATLAT komutuyla blokları açıp tekrar kaydedin.`]);
   if (sk['SPLINE (yaklaşık)']) msgs.push(['warn', 'Spline eğriler yaklaşık okundu; ölçüler küçük sapma gösterebilir.']);
+  msgs.push(...state.fileMsgs);
   showMsgs(msgs);
+  $('#scaleBox').hidden = !state.part;
+  if (state.part) $('#scaleW').value = +state.part.bb.w.toFixed(2);
   state.geoSig = '';
   recompute();
 }
 
 function showMsgs(m) { $('#fileInfo').innerHTML = m.map(([k, t]) => `<p class="${k === 'err' ? 'err' : ''}" ${k === 'ok' ? 'style="border-left-color:var(--steel)"' : ''}>${esc(t)}</p>`).join(''); }
+
+/* ---------- Ölçek düzeltme ---------- */
+$('#scaleW').onchange = () => {
+  const v = parseFloat($('#scaleW').value.replace(',', '.'));
+  if (!(v > 0) || !state.part || !state.pieces) return;
+  state.scale *= v / state.part.bb.w;
+  rebuildPart(); toast('Çizim ölçeklendi');
+};
+
+/* ---------- Kaynak: dosya / hızlı parça ---------- */
+document.querySelectorAll('#srcSeg button').forEach(b => b.onclick = () => setSrc(b.dataset.s));
+function setSrc(s, silent) {
+  if (state.src === s && silent) return;
+  state.src = s;
+  document.querySelectorAll('#srcSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.s === s));
+  $('#srcFile').hidden = s !== 'file'; $('#srcQuick').hidden = s !== 'quick';
+  $('#layerBox').hidden = true; $('#scaleBox').hidden = true;
+  renderGeoFields();
+  if (silent) return;
+  if (s === 'quick') renderQuick();
+  else if (state.pieces) { renderLayers(); rebuildPart(); }
+  else { state.part = null; showMsgs([]); state.geoSig = ''; recompute(); }
+}
+
+const isRevMode = () => state.proc === 'torna' || (state.proc === 'dokum' && state.params.dokum.shape === 'rev');
+const QSHAPES = { plaka: 'Plaka', flans: 'Flanş / disk', mil: 'Mil / burç' };
+function quickShapes() { return isRevMode() ? ['mil', 'flans'] : ['plaka', 'flans']; }
+
+function renderQuick() {
+  const Q = state.quick, shapes = quickShapes();
+  if (!shapes.includes(Q.shape)) Q.shape = shapes[0];
+  const rev = isRevMode(), S = Q[Q.shape];
+  const f = (k, label, unit, hint) => `<label class="f"><span>${label}</span><div class="in"><input type="number" inputmode="decimal" min="0" data-qk="${k}" value="${S[k]}"><em>${unit}</em></div>${hint ? `<small>${hint}</small>` : ''}</label>`;
+  let h = `<div class="seg two" id="qShapeSeg">` + shapes.map(s => `<button data-qs="${s}" aria-pressed="${s === Q.shape}">${QSHAPES[s]}</button>`).join('') + `</div><div class="grid" style="margin-top:12px">`;
+  if (Q.shape === 'plaka') {
+    h += f('w', 'Genişlik', 'mm') + f('h', 'Boy', 'mm') + f('r', 'Köşe yarıçapı', 'mm') + f('midD', 'Orta delik çapı', 'mm', '0 = yok') + f('holeD', 'Bağlantı deliği çapı', 'mm') + f('holeN', 'Bağlantı deliği adedi', 'adet') + '</div>';
+    h += `<p class="note">${rev ? '' : 'Kalınlık yukarıdaki işlem bölümünden girilir. '}Deliklerin yeri hesaba etki etmez; sadece çap ve adet önemlidir.</p>`;
+  } else if (Q.shape === 'flans') {
+    h += f('D', 'Dış çap', 'mm') + f('d', 'İç delik çapı', 'mm', '0 = dolu disk');
+    if (rev) h += f('t', 'Kalınlık', 'mm') + '</div><p class="note">Tornada civata delikleri hesaba katılmaz; delme süresini finiş süresine ekleyin.</p>';
+    else h += f('bcd', 'Delik çemberi çapı', 'mm') + f('boltD', 'Civata deliği çapı', 'mm') + f('boltN', 'Civata deliği adedi', 'adet') + '</div><p class="note">Kalınlık yukarıdaki işlem bölümünden girilir.</p>';
+  } else {
+    h += f('bore', 'Boydan boya iç delik çapı', 'mm', '0 = dolu mil') + '</div>';
+    h += `<div class="qsteps">` + S.steps.map((st, i) => `<div class="qstep"><b>${i + 1}.</b>
+      <label class="f"><span>Çap</span><div class="in"><input type="number" inputmode="decimal" data-si="${i}" data-sk="d" value="${st.d}"><em>mm</em></div></label>
+      <label class="f"><span>Boy</span><div class="in"><input type="number" inputmode="decimal" data-si="${i}" data-sk="l" value="${st.l}"><em>mm</em></div></label>
+      <button class="btn ghost" data-sdel="${i}" aria-label="${i + 1}. kademeyi sil" ${S.steps.length < 2 ? 'disabled' : ''}>×</button></div>`).join('') + `</div>
+      <div class="row" style="margin-top:8px"><button class="btn" id="qAddStep" ${S.steps.length >= 10 ? 'disabled' : ''}>Kademe ekle</button></div>
+      <p class="note">Kademeleri soldan sağa sırayla girin. Tek çaplı mil için tek kademe yeterli.</p>`;
+  }
+  $('#quickForm').innerHTML = h;
+  $('#quickForm').querySelectorAll('[data-qs]').forEach(b => b.onclick = () => { Q.shape = b.dataset.qs; renderQuick(); });
+  $('#quickForm').querySelectorAll('[data-qk]').forEach(i => i.oninput = () => { const v = parseFloat(i.value.replace(',', '.')); if (v >= 0) { S[i.dataset.qk] = v; buildQuick(); } });
+  $('#quickForm').querySelectorAll('[data-si]').forEach(i => i.oninput = () => { const v = parseFloat(i.value.replace(',', '.')); if (v >= 0) { S.steps[+i.dataset.si][i.dataset.sk] = v; buildQuick(); } });
+  $('#quickForm').querySelectorAll('[data-sdel]').forEach(b => b.onclick = () => { S.steps.splice(+b.dataset.sdel, 1); renderQuick(); });
+  const add = $('#qAddStep'); if (add) add.onclick = () => { const l = S.steps[S.steps.length - 1]; S.steps.push({ d: Math.max((S.bore || 0) + 5, l.d - 10, 5), l: 30 }); renderQuick(); };
+  buildQuick();
+}
+
+const circ = (cx, cy, r, n = 72) => { const p = []; for (let k = 0; k < n; k++) p.push([cx + r * Math.cos(2 * Math.PI * k / n), cy + r * Math.sin(2 * Math.PI * k / n)]); return p; };
+function quickLoops() {
+  const Q = state.quick, rev = isRevMode(), S = Q[Q.shape], E = m => { throw new Error(m); };
+  if (Q.shape === 'plaka') {
+    const { w, h } = S, r = Math.min(S.r || 0, w / 2, h / 2);
+    if (!(w > 0 && h > 0)) E('Genişlik ve boy girin.');
+    const o = [];
+    if (r > 0.01) {
+      const cs = [[w / 2 - r, h / 2 - r, 0], [-w / 2 + r, h / 2 - r, 90], [-w / 2 + r, -h / 2 + r, 180], [w / 2 - r, -h / 2 + r, 270]];
+      cs.forEach(([cx, cy, a0]) => { for (let k = 0; k <= 9; k++) { const a = (a0 + k * 10) * Math.PI / 180; o.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } });
+    } else o.push([w / 2, h / 2], [-w / 2, h / 2], [-w / 2, -h / 2], [w / 2, -h / 2]);
+    const loops = [o], hd = S.holeD || 0, hn = Math.round(S.holeN || 0), md = S.midD || 0;
+    if (md > 0) { if (md >= Math.min(w, h) - 2) E('Orta delik plakadan büyük.'); loops.push(circ(0, 0, md / 2)); }
+    if (hd > 0 && hn > 0) {
+      if (hd >= Math.min(w, h) / 2) E('Bağlantı deliği plakaya sığmıyor.');
+      const ins = Math.max(hd, Math.min(w, h) * 0.12, r * 0.6), iw = w / 2 - ins, ih = h / 2 - ins;
+      const pts = [];
+      if (hn <= 4) [[-iw, -ih], [iw, ih], [iw, -ih], [-iw, ih]].slice(0, hn).forEach(p => pts.push(p));
+      else { const per = 4 * (iw + ih); for (let k = 0; k < hn; k++) { let s = per * k / hn; const seg = [[2 * iw, [-iw, -ih], [1, 0]], [2 * ih, [iw, -ih], [0, 1]], [2 * iw, [iw, ih], [-1, 0]], [2 * ih, [-iw, ih], [0, -1]]]; for (const [len, p0, d] of seg) { if (s <= len) { pts.push([p0[0] + d[0] * s, p0[1] + d[1] * s]); break; } s -= len; } } }
+      pts.forEach(([x, y]) => loops.push(circ(x, y, hd / 2, 36)));
+    }
+    return { loops, name: `Plaka ${fmt(w, 0)}×${fmt(h, 0)}` };
+  }
+  if (Q.shape === 'flans') {
+    const { D, d } = S;
+    if (!(D > 0)) E('Dış çapı girin.');
+    if (d >= D) E('İç delik dış çaptan küçük olmalı.');
+    if (rev) {
+      if (!(S.t > 0)) E('Kalınlığı girin.');
+      return { loops: [[[0, d / 2], [S.t, d / 2], [S.t, D / 2], [0, D / 2]]], name: `Disk Ø${fmt(D, 0)}×${fmt(S.t, 0)}` };
+    }
+    const loops = [circ(0, 0, D / 2, 120)];
+    if (d > 0) loops.push(circ(0, 0, d / 2, 96));
+    const n = Math.round(S.boltN || 0), bd = S.boltD || 0;
+    if (n > 0 && bd > 0) {
+      if (S.bcd / 2 + bd / 2 >= D / 2 || S.bcd / 2 - bd / 2 <= d / 2) E('Civata delikleri flanşa sığmıyor; delik çemberi çapını kontrol edin.');
+      for (let k = 0; k < n; k++) { const a = Math.PI / 2 + 2 * Math.PI * k / n; loops.push(circ(S.bcd / 2 * Math.cos(a), S.bcd / 2 * Math.sin(a), bd / 2, 36)); }
+    }
+    return { loops, name: `Flanş Ø${fmt(D, 0)}` };
+  }
+  const b = (S.bore || 0) / 2, st = S.steps.filter(s => s.d > 0 && s.l > 0);
+  if (!st.length) E('En az bir kademe için çap ve boy girin.');
+  if (st.some(s => s.d / 2 <= b)) E('İç delik, en küçük kademe çapından küçük olmalı.');
+  const p = [[0, b]]; let x = 0;
+  st.forEach(s => { p.push([x, s.d / 2]); x += s.l; p.push([x, s.d / 2]); });
+  p.push([x, b]);
+  const dmax = Math.max(...st.map(s => s.d));
+  return { loops: [p], name: `${b > 0 ? 'Burç' : 'Mil'} Ø${fmt(dmax, 0)}×${fmt(x, 0)}` };
+}
+function buildQuick() {
+  try {
+    const { loops, name } = quickLoops();
+    state.part = Core.analyze(loops);
+    state.fileName = name;
+    showMsgs([['ok', `Hızlı parça: ${name}`]]);
+    setPartName(name);
+  } catch (err) { state.part = null; showMsgs([['err', err.message]]); }
+  state.geoSig = ''; recompute();
+}
 
 /* ---------- İşlem seçimi ---------- */
 document.querySelectorAll('#procSeg button').forEach(b => b.onclick = () => setProc(b.dataset.p));
@@ -856,6 +1090,7 @@ function setProc(p, silent) {
   document.querySelectorAll('#procSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.p === p));
   renderGeoFields(); renderMatSel(); renderProcFields();
   state.geoSig = '';
+  if (state.src === 'quick') { renderQuick(); return; }
   if (!silent) recompute();
 }
 
@@ -877,15 +1112,17 @@ function bindInputs(root) {
     const k = seg.dataset.segk, val = isNaN(+b.dataset.val) ? b.dataset.val : +b.dataset.val;
     state.params[state.proc][k] = val;
     if (seg.closest('#geoFields')) renderGeoFields(); else renderProcFields();
-    state.geoSig = ''; recompute();
+    state.geoSig = '';
+    if (k === 'shape' && state.src === 'quick') { renderQuick(); return; }
+    recompute();
   }));
 }
 
 function renderGeoFields() {
   const p = state.proc, P = state.params[p]; let h = '';
-  const revBlock = () => `<div class="grid"><div><small>Dönme ekseni</small>${segHtml('axis', [['orta', 'Çizimin ortası'], ['alt', 'Alt kenar']])}</div>
+  const revBlock = () => state.src === 'quick' ? '' : `<div class="grid"><div><small>Dönme ekseni</small>${segHtml('axis', [['orta', 'Çizim ortası'], ['alt', 'Alt kenar'], ['orijin', 'X ekseni']])}</div>
     <div><small>Eksen yönü</small>${segHtml('vert', [[0, 'Yatay'], [1, 'Dikey']])}</div></div>
-    <p class="note">Tam görünüş çizdiyseniz ekseni "çizimin ortası", yarım profil çizdiyseniz "alt kenar" seçin.</p>`;
+    <p class="note">Tam görünüşte "çizim ortası", yarım profilde "alt kenar" seçin. Delikli dönel parçanın (burç gibi) yarım profilini eksen X ekseni üzerinde çizdiyseniz "X ekseni" seçin.</p>`;
   if (p === 'sac') h = `<div class="grid">${num('t', 'Sac kalınlığı', 'mm')}</div>`;
   else if (p === 'freze') h = `<div class="grid">${num('t', 'Parça yüksekliği', 'mm')}</div>`;
   else if (p === 'torna') h = revBlock();
@@ -932,7 +1169,7 @@ const qtys = () => { const q = $('#qtys').value.split(/[,;\s]+/).map(x => parseI
 /* ---------- Hesap ---------- */
 function makeGeo() {
   const p = state.proc, P = state.params[p], part = state.part;
-  if (p === 'torna' || (p === 'dokum' && P.shape === 'rev')) return Core.revolveGeo(part, P.axis, !!P.vert);
+  if (p === 'torna' || (p === 'dokum' && P.shape === 'rev')) return state.src === 'quick' ? Core.revolveGeo(part, 'orijin', false) : Core.revolveGeo(part, P.axis, !!P.vert);
   return Core.extrudeGeo(part, Math.max(0.01, P.t));
 }
 
@@ -1127,14 +1364,28 @@ function quoteText(q) {
     q.rows.map(r => `${r.q} adet: birim ${tl(r.unit)}, toplam ${tl(r.total)} + KDV`).join('\n') + `\nGeçerlilik: ${q.valid || 15} gün`;
 }
 
-$('#bPrint').onclick = () => window.print();
+const EMBED = (() => { try { return window.self !== window.top; } catch { return true; } })();
+$('#bPrint').onclick = () => {
+  if (EMBED) { toast('PDF için uygulamayı kendi bağlantısından (GitHub) açın'); return; }
+  window.print();
+};
+function ask(msg) {
+  return new Promise(res => {
+    $('#askMsg').textContent = msg; $('#askBox').hidden = false;
+    const done = v => { $('#askBox').hidden = true; res(v); };
+    $('#askYes').onclick = () => done(true); $('#askNo').onclick = () => done(false);
+  });
+}
 $('#bShare').onclick = async () => {
   if (!quote) return;
   const text = quoteText(quote);
   try {
     if (navigator.share) await navigator.share({ title: 'Fiyat teklifi ' + quote.no, text });
-    else { await navigator.clipboard.writeText(text); toast('Teklif metni kopyalandı'); }
-  } catch { /* kullanıcı vazgeçti */ }
+    else throw 0;
+  } catch (e) {
+    if (e && e.name === 'AbortError') return;
+    try { await navigator.clipboard.writeText(text); toast('Teklif metni kopyalandı'); } catch { toast('Paylaşılamadı; WhatsApp düğmesini kullanın'); }
+  }
 };
 $('#bSave').onclick = () => {
   if (!quote) return;
@@ -1163,8 +1414,8 @@ function renderHistory() {
     $('#qBreak').checked = !!r.breakdown; $('#qShot').checked = r.showShot !== false;
     renderQuoteDoc();
   });
-  $('#histList').querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
-    if (!confirm('Bu teklif silinsin mi?')) return;
+  $('#histList').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    if (!(await ask('Bu teklif silinsin mi?'))) return;
     h.splice(+b.dataset.del, 1); store.set('history', h); renderHistory();
   });
 }
@@ -1208,8 +1459,8 @@ $('#pLogo').onchange = e => {
 };
 $('#pLogoDel').onclick = () => { prof.logo = ''; renderSettings(); };
 $('#pSave').onclick = () => { prof.saved = true; toast(store.set('profile', prof) ? 'Ayarlar kaydedildi' : 'Kaydedilemedi'); renderSettings(); recompute(); };
-$('#pReset').onclick = () => {
-  if (!confirm('Malzeme fiyatları, oranlar ve döküm yöntemleri varsayılana dönsün mü? Firma bilgileriniz korunur.')) return;
+$('#pReset').onclick = async () => {
+  if (!(await ask('Malzeme fiyatları, oranlar ve döküm yöntemleri varsayılana dönsün mü? Firma bilgileriniz korunur.'))) return;
   const keep = { firma: prof.firma, tel: prof.tel, mail: prof.mail, adres: prof.adres, logo: prof.logo, theme: prof.theme };
   prof = Object.assign(clone(DEF_PROF), keep); store.set('profile', prof);
   renderSettings(); renderMatSel(); renderProcFields(); recompute(); toast('Varsayılanlar yüklendi');
