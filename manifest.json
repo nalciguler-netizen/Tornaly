@@ -1,0 +1,25 @@
+{
+ "id": "./?app=tornaly",
+ "name": "Tornaly – CNC ve Döküm Teklif",
+ "short_name": "Tornaly",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#1C2830",
+ "theme_color": "#1C2830",
+ "lang": "tr",
+ "icons": [
+  {
+   "src": "tornaly-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "tornaly-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any maskable"
+  }
+ ]
+}
