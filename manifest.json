@@ -2,12 +2,20 @@
  "id": "./?app=tornaly",
  "name": "Tornaly – CNC ve Döküm Teklif",
  "short_name": "Tornaly",
+ "description": "DXF/SVG çizimden veya ölçüden 3B görünüm, ağırlık ve maliyet hesaplayıp torna, freze, sac ve döküm için teklif hazırlayın.",
  "start_url": "./",
  "scope": "./",
  "display": "standalone",
+ "orientation": "any",
  "background_color": "#1C2830",
  "theme_color": "#1C2830",
  "lang": "tr",
+ "dir": "ltr",
+ "categories": [
+  "business",
+  "productivity",
+  "utilities"
+ ],
  "icons": [
   {
    "src": "tornaly-192.png",
@@ -19,7 +27,13 @@
    "src": "tornaly-512.png",
    "sizes": "512x512",
    "type": "image/png",
-   "purpose": "any maskable"
+   "purpose": "any"
+  },
+  {
+   "src": "tornaly-maskable-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
   }
  ]
 }
