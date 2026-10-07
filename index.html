@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1C2830">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Tornaly · CNC ve Döküm Teklif</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E6EAEC; --surface:#F6F8F9; --ink:#1C2830; --muted:#566771; --line:#C5CED3;
+  --tape:#F2B705; --tape-ink:#1C2830; --steel:#2B6683; --warn:#9A5B00; --err:#A3262A;
+  --r-s:6px; --r-m:10px;
+  --body:'Barlow',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --cond:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#13181B; --surface:#1C2328; --ink:#E1E7EA; --muted:#93A3AB; --line:#2E3A41;
+  --steel:#73B3D3; --warn:#E3A84A; --err:#F07C7F;
+}}
+:root[data-theme="dark"]{
+  --paper:#13181B; --surface:#1C2328; --ink:#E1E7EA; --muted:#93A3AB; --line:#2E3A41;
+  --steel:#73B3D3; --warn:#E3A84A; --err:#F07C7F;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+main{max-width:720px;margin:0 auto;padding:0 16px 120px}
+h1,h2,h3{font-family:var(--cond);font-weight:600;line-height:1.1;margin:0}
+h2{font-size:1.5rem;margin:28px 0 10px}
+h3{font-size:1.15rem;margin:18px 0 8px}
+p{margin:0 0 10px}
+small,.muted{color:var(--muted)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--tape);outline-offset:2px}
+
+/* üst bant */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--ink);color:var(--paper)}
+.top-in{max-width:720px;margin:0 auto;padding:10px 16px;display:flex;align-items:baseline;gap:10px}
+.top h1{font-size:1.6rem;font-weight:700;letter-spacing:.01em}
+.top span{font-size:.9rem;opacity:.75}
+.top::after{content:"";display:block;height:6px;background:repeating-linear-gradient(-45deg,var(--tape) 0 12px,var(--ink) 12px 24px)}
+
+/* alt menü */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+nav.tabs button{background:none;border:0;padding:12px 4px 14px;font-family:var(--cond);font-size:1.05rem;font-weight:600;color:var(--muted);border-top:3px solid transparent}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-top-color:var(--tape)}
+section.view{display:none}
+section.view.on{display:block}
+
+/* bloklar */
+.block{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);padding:14px;margin:12px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--ink);background:transparent;border-radius:var(--r-s);padding:10px 14px;font-weight:600;cursor:pointer}
+.btn{text-decoration:none;color:inherit;display:inline-block}
+.btn.main{background:var(--ink);color:var(--paper)}
+.btn.tape{background:var(--tape);color:var(--tape-ink);border-color:var(--tape)}
+.btn.ghost{border-color:var(--line)}
+.btn:disabled{opacity:.45}
+.file{position:relative;overflow:hidden}
+.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
+
+.seg{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--ink);border-radius:var(--r-s);overflow:hidden}
+.seg button{border:0;border-left:1px solid var(--ink);background:transparent;padding:11px 2px;font-family:var(--cond);font-weight:600;font-size:1.05rem;cursor:pointer}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.seg.two{grid-template-columns:1fr 1fr}
+.seg.two:has(button:nth-child(3)){grid-template-columns:repeat(3,1fr)}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.grid>*{min-width:0}
+.in select{width:100%;text-overflow:ellipsis}
+@media (max-width:380px){.grid{grid-template-columns:1fr}}
+label.f{display:block}
+label.f>span{display:block;font-size:.9rem;color:var(--muted);margin-bottom:3px}
+.in{display:flex;align-items:center;border:1px solid var(--line);border-radius:var(--r-s);background:var(--paper)}
+.in input,.in select{flex:1;min-width:0;border:0;background:transparent;padding:9px 10px;font-size:1rem}
+.in em{font-style:normal;color:var(--muted);padding-right:10px;font-size:.9rem;white-space:nowrap}
+select.full,input.full,textarea.full{width:100%;border:1px solid var(--line);border-radius:var(--r-s);background:var(--paper);padding:9px 10px}
+label.chk{display:flex;gap:8px;align-items:center;padding:4px 0}
+label.chk input{width:20px;height:20px;accent-color:var(--ink)}
+
+/* 3B görüntüleyici */
+.viewer{position:relative;height:300px;border-radius:var(--r-m);overflow:hidden;background:
+  linear-gradient(var(--line) 1px,transparent 1px) 0 0/24px 24px,
+  linear-gradient(90deg,var(--line) 1px,transparent 1px) 0 0/24px 24px,var(--surface);border:1px solid var(--line);touch-action:none}
+.viewer canvas{display:block;width:100%;height:100%}
+.viewer .hint{position:absolute;left:10px;bottom:8px;font-size:.8rem;color:var(--muted);pointer-events:none}
+.viewer .empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;color:var(--muted)}
+
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-s);overflow:hidden;margin-top:10px}
+.facts div{background:var(--surface);padding:8px 10px}
+.facts b{display:block;font-family:var(--cond);font-size:1.12rem;font-weight:600;overflow-wrap:anywhere}
+.facts small{font-size:.8rem}
+.msgs p{font-size:.9rem;margin:6px 0 0;padding-left:10px;border-left:3px solid var(--warn);color:var(--ink)}
+.msgs p.err{border-left-color:var(--err)}
+.layers{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px}
+
+/* sonuç plakası */
+.plate{background:var(--tape);color:var(--tape-ink);border-radius:var(--r-m);padding:16px 16px 14px;margin:16px 0 8px;position:relative}
+.plate .lbl{font-size:.95rem;font-weight:500}
+.plate .big{font-family:var(--cond);font-weight:700;font-size:clamp(2.1rem,10vw,3.1rem);line-height:1;margin:4px 0 6px;font-variant-numeric:tabular-nums}
+.plate .sub{display:flex;gap:18px;flex-wrap:wrap;font-size:.95rem}
+.plate .sub b{font-family:var(--cond);font-size:1.2rem}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:7px 6px;white-space:nowrap;border-bottom:1px solid var(--line);text-align:right;vertical-align:top}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+th{font-weight:600;font-size:.88rem;color:var(--muted)}
+.tw{overflow-x:auto}
+.note{font-size:.88rem;color:var(--muted);margin-top:8px}
+
+/* teklif belgesi */
+.doc{background:#fff;color:#1C2830;border-radius:var(--r-m);padding:22px;border:1px solid var(--line)}
+.doc .dh{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-bottom:3px solid #1C2830;padding-bottom:10px}
+.doc .dh img{max-height:56px;max-width:160px}
+.doc h2{margin:0;font-size:1.8rem}
+.doc .meta{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;margin:14px 0;font-size:.95rem}
+.doc .meta b{font-weight:600}
+.doc .shot{width:100%;max-height:220px;object-fit:contain;border:1px solid #D5DCE0;border-radius:6px;background:#fff}
+.doc th{color:#566771}
+.doc th,.doc td{white-space:normal;font-size:.9rem;padding:6px 4px}
+.doc td,.doc th{border-bottom-color:#D5DCE0}
+.doc .foot{margin-top:14px;font-size:.88rem;color:#566771}
+
+.hist{list-style:none;padding:0;margin:0}
+.hist li{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);padding:12px;margin:8px 0;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.hist b{font-family:var(--cond);font-size:1.15rem}
+.matTable input{width:100%;min-width:60px;border:1px solid var(--line);border-radius:4px;background:var(--paper);padding:5px 6px;text-align:right}
+.matTable td:first-child{min-width:130px}
+details{border-top:1px solid var(--line);padding:10px 0}
+details summary{cursor:pointer;font-weight:600}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:var(--r-s);font-weight:500;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+.toast.on{opacity:1}
+.askbg{position:fixed;inset:0;z-index:10;background:rgba(10,15,18,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.ask{background:var(--surface);color:var(--ink);border-radius:var(--r-m);padding:18px;max-width:360px;width:100%}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+@media print{
+  @page{margin:14mm}
+  body{background:#fff}
+  .top,nav.tabs,.no-print,section.view:not(#v-teklif){display:none!important}
+  main{padding:0;max-width:none}
+  #v-teklif{display:block!important}
+  .doc{border:0;padding:0}
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><h1>Tornaly</h1><span>CNC ve döküm teklif</span></div></header>
+
+<main>
+<!-- ================= HESAP ================= -->
+<section class="view on" id="v-hesap">
+  <h2>Parça</h2>
+  <div class="row">
+    <label class="btn main file">DXF dosyası seç<input type="file" id="dxfIn"></label>
+    <select id="sampleSel" class="btn ghost" aria-label="Örnek çizim">
+      <option value="">Örnek çizim aç</option>
+      <option value="braket">Sac braket</option>
+      <option value="flans">Flanş</option>
+      <option value="mil">Kademeli mil</option>
+    </select>
+  </div>
+  <p class="note">AutoCAD'de çizimi Farklı Kaydet ile DXF olarak kaydedin. Bloklar varsa önce PATLAT (EXPLODE) komutunu kullanın. Çiziminiz bu cihazdan dışarı gönderilmez.</p>
+  <div id="fileInfo" class="msgs"></div>
+  <div id="layerBox" class="block" hidden>
+    <b>Katmanlar</b> <small>Ölçü, eksen ve yazı katmanlarını kapatın.</small>
+    <div class="layers" id="layers"></div>
+  </div>
+
+  <h3>İşlem</h3>
+  <div class="seg" id="procSeg" role="group" aria-label="İşlem türü">
+    <button data-p="sac" aria-pressed="true">Sac / lazer</button>
+    <button data-p="torna" aria-pressed="false">Torna</button>
+    <button data-p="freze" aria-pressed="false">Freze</button>
+    <button data-p="dokum" aria-pressed="false">Döküm</button>
+  </div>
+  <div id="geoFields" style="margin-top:12px"></div>
+
+  <div class="viewer" id="viewer" style="margin-top:12px">
+    <canvas id="cv"></canvas>
+    <div class="empty" id="viewerEmpty">Bir DXF dosyası seçin ya da örnek çizim açın.</div>
+    <div class="hint" id="viewerHint" hidden>Sürükleyerek çevirin, iki parmakla yakınlaştırın</div>
+  </div>
+  <div class="facts" id="facts" hidden></div>
+
+  <h2>Malzeme ve maliyet</h2>
+  <label class="f"><span>Malzeme</span><select id="matSel" class="full"></select></label>
+  <div id="procFields" class="grid" style="margin-top:12px"></div>
+  <div class="grid" style="margin-top:12px">
+    <label class="f"><span>Adetler (virgülle)</span><div class="in"><input id="qtys" value="1, 10, 100" inputmode="numeric"></div></label>
+    <div>
+      <label class="chk"><input type="checkbox" id="finBoya"> Boya</label>
+      <label class="chk"><input type="checkbox" id="finGalv"> Galvaniz</label>
+    </div>
+  </div>
+
+  <div id="result"></div>
+</section>
+
+<!-- ================= TEKLİF ================= -->
+<section class="view" id="v-teklif">
+  <h2 class="no-print">Teklif</h2>
+  <div id="quoteEmpty" class="block no-print">Teklif hazırlamak için önce Hesap ekranında bir parça hesaplayın.</div>
+  <div id="quoteForm" class="no-print" hidden>
+    <div class="grid">
+      <label class="f"><span>Müşteri</span><input id="qCust" class="full" placeholder="Firma veya kişi adı"></label>
+      <label class="f"><span>Parça adı</span><input id="qPart" class="full" placeholder="Örn. Flanş DN50"></label>
+      <label class="f"><span>Geçerlilik</span><div class="in"><input type="number" id="qValid" value="15"><em>gün</em></div></label>
+      <label class="f"><span>Teslim süresi</span><input id="qLead" class="full" placeholder="Örn. 10 iş günü"></label>
+    </div>
+    <label class="f" style="margin-top:10px"><span>Not</span><textarea id="qNote" class="full" rows="2" placeholder="Ödeme şekli, nakliye vb."></textarea></label>
+    <label class="chk"><input type="checkbox" id="qBreak"> Maliyet dökümünü müşteriye göster</label>
+    <label class="chk"><input type="checkbox" id="qShot" checked> 3B görüntüyü ekle</label>
+    <div class="row" style="margin:10px 0 16px">
+      <button class="btn main" id="bPrint">PDF olarak kaydet</button>
+      <button class="btn" id="bShare">Paylaş</button>
+      <a class="btn" id="bWa" target="_blank" rel="noopener">WhatsApp</a>
+      <button class="btn tape" id="bSave">Geçmişe kaydet</button>
+    </div>
+  </div>
+  <div id="quoteDoc"></div>
+</section>
+
+<!-- ================= GEÇMİŞ ================= -->
+<section class="view" id="v-gecmis">
+  <h2>Geçmiş teklifler</h2>
+  <input id="hSearch" class="full" placeholder="Müşteri veya parça ara">
+  <ul class="hist" id="histList"></ul>
+</section>
+
+<!-- ================= AYARLAR ================= -->
+<section class="view" id="v-ayar">
+  <h2>Atölye</h2>
+  <p class="muted" id="profWarn">Fiyatlar şu an örnek değerlerle geliyor. Kendi rakamlarınızı girip kaydedin.</p>
+  <div class="grid">
+    <label class="f"><span>Firma adı</span><input id="pFirma" class="full"></label>
+    <label class="f"><span>Telefon</span><input id="pTel" class="full" inputmode="tel"></label>
+    <label class="f"><span>E-posta</span><input id="pMail" class="full" inputmode="email"></label>
+    <label class="f"><span>Adres</span><input id="pAdres" class="full"></label>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <label class="btn file">Logo yükle<input type="file" id="pLogo" accept="image/*"></label>
+    <img id="logoPrev" alt="" style="max-height:40px" hidden>
+    <button class="btn ghost" id="pLogoDel" hidden>Logoyu kaldır</button>
+  </div>
+
+  <h3>Saat ücretleri ve oranlar</h3>
+  <div class="grid" id="rateFields"></div>
+
+  <h3>Malzemeler</h3>
+  <p class="note">Yoğunluk g/cm³, fiyat TL/kg. Talaş kaldırma, tornada dakikada kaldırılan ortalama talaş hacmidir.</p>
+  <div class="tw"><table class="matTable" id="matTable"></table></div>
+
+  <h3>Döküm yöntemleri</h3>
+  <p class="note">Atölyenizde kullandığınız yöntemleri işaretleyin. Değerler genel başlangıç değerleridir; kendi dökümhane oranlarınızla değiştirin.</p>
+  <div id="methodBox"></div>
+
+  <div class="row" style="margin:18px 0">
+    <button class="btn main" id="pSave">Ayarları kaydet</button>
+    <button class="btn ghost" id="pReset">Varsayılanlara dön</button>
+  </div>
+
+  <h3>Görünüm</h3>
+  <div class="seg" id="themeSeg" style="grid-template-columns:repeat(3,1fr)">
+    <button data-t="auto" aria-pressed="true">Otomatik</button>
+    <button data-t="light" aria-pressed="false">Açık</button>
+    <button data-t="dark" aria-pressed="false">Koyu</button>
+  </div>
+
+  <h3>Yasal</h3>
+  <details><summary>Kullanım koşulları</summary>
+    <p>Tornaly, girilen çizim ve fiyat bilgilerine göre tahmini ağırlık ve maliyet hesaplar. Sonuçlar ön teklif amaçlıdır; müşteriye verilen nihai fiyatın, ölçülerin ve teknik uygunluğun kontrolü kullanıcının sorumluluğundadır.</p>
+    <p>Uygulamaya yüklediğiniz çizimleri kullanma hakkına sahip olduğunuzu kabul edersiniz. Uygulama ticari amaçla kullanılabilir. Uygulamanın kodu, adı ve tasarımı geliştiricisine aittir; izinsiz kopyalanamaz ve dağıtılamaz.</p>
+  </details>
+  <details><summary>Gizlilik</summary>
+    <p>Çizimleriniz, atölye bilgileriniz ve teklifleriniz yalnızca bu cihazdaki tarayıcı hafızasında saklanır. Hiçbir sunucuya gönderilmez, üçüncü kişilerle paylaşılmaz. Tarayıcı verilerini sildiğinizde kayıtlar da silinir.</p>
+  </details>
+  <p class="note">Tornaly sürüm 1.0</p>
+</section>
+</main>
+
+<nav class="tabs" aria-label="Bölümler"><div class="in" role="tablist">
+  <button role="tab" data-v="hesap" aria-selected="true">Hesap</button>
+  <button role="tab" data-v="teklif" aria-selected="false">Teklif</button>
+  <button role="tab" data-v="gecmis" aria-selected="false">Geçmiş</button>
+  <button role="tab" data-v="ayar" aria-selected="false">Ayarlar</button>
+</div></nav>
+<div class="toast" id="toast" role="status"></div>
+<div class="askbg" id="askBox" hidden><div class="ask" role="dialog" aria-modal="true" aria-labelledby="askMsg"><p id="askMsg"></p><div class="row" style="justify-content:flex-end"><button class="btn ghost" id="askNo">Vazgeç</button><button class="btn main" id="askYes">Evet</button></div></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ===== Tornaly çekirdek: DXF okuma, geometri, maliyet ===== */
+const Core = (() => {
+  const DEG = Math.PI / 180;
+
+  /* ---------- DXF ---------- */
+  function parseDXF(text) {
+    const lines = text.split(/\r?\n/);
+    const pairs = [];
+    for (let i = 0; i + 1 < lines.length; i += 2) {
+      const c = parseInt(lines[i].trim(), 10);
+      if (!isNaN(c)) pairs.push([c, lines[i + 1].trim()]);
+    }
+    let insunits = 4;
+    for (let i = 0; i < pairs.length - 1; i++) {
+      if (pairs[i][0] === 9 && pairs[i][1] === '$INSUNITS') { insunits = parseInt(pairs[i + 1][1], 10); break; }
+    }
+    const scaleMap = { 0: 1, 1: 25.4, 2: 304.8, 4: 1, 5: 10, 6: 1000 };
+    const scale = scaleMap[insunits] || 1;
+
+    let start = -1, end = pairs.length;
+    for (let i = 0; i < pairs.length - 1; i++) {
+      if (pairs[i][0] === 0 && pairs[i][1] === 'SECTION' && pairs[i + 1][0] === 2 && pairs[i + 1][1] === 'ENTITIES') { start = i + 2; break; }
+    }
+    if (start < 0) throw new Error('Dosyada çizim bölümü (ENTITIES) bulunamadı. Dosyanın DXF olduğundan emin olun.');
+    for (let i = start; i < pairs.length; i++) if (pairs[i][0] === 0 && pairs[i][1] === 'ENDSEC') { end = i; break; }
+
+    const ents = []; let cur = null;
+    for (let i = start; i < end; i++) {
+      const [c, v] = pairs[i];
+      if (c === 0) { cur = { type: v, codes: [] }; ents.push(cur); } else if (cur) cur.codes.push([c, v]);
+    }
+
+    const pieces = [], skipped = {}, layers = new Set();
+    const g = (codes, c, d = 0) => { const f = codes.find(x => x[0] === c); return f ? parseFloat(f[1]) : d; };
+    const gs = (codes, c, d = '0') => { const f = codes.find(x => x[0] === c); return f ? f[1] : d; };
+    const S = p => [p[0] * scale, p[1] * scale];
+    const add = (layer, pts, closed) => { layers.add(layer); pieces.push({ layer, pts: pts.map(S), closed }); };
+
+    for (let i = 0; i < ents.length; i++) {
+      const e = ents[i], c = e.codes, layer = gs(c, 8);
+      switch (e.type) {
+        case 'LINE':
+          add(layer, [[g(c, 10), g(c, 20)], [g(c, 11), g(c, 21)]], false); break;
+        case 'CIRCLE': {
+          const cx = g(c, 10), cy = g(c, 20), r = g(c, 40), n = 72, pts = [];
+          for (let k = 0; k < n; k++) pts.push([cx + r * Math.cos(2 * Math.PI * k / n), cy + r * Math.sin(2 * Math.PI * k / n)]);
+          add(layer, pts, true); break;
+        }
+        case 'ARC': {
+          const cx = g(c, 10), cy = g(c, 20), r = g(c, 40);
+          let a0 = g(c, 50) * DEG, a1 = g(c, 51) * DEG;
+          if (a1 <= a0) a1 += 2 * Math.PI;
+          add(layer, arcPts(cx, cy, r, a0, a1), false); break;
+        }
+        case 'ELLIPSE': {
+          const cx = g(c, 10), cy = g(c, 20), mx = g(c, 11), my = g(c, 21), ratio = g(c, 40, 1);
+          let t0 = g(c, 41, 0), t1 = g(c, 42, 2 * Math.PI);
+          if (t1 <= t0) t1 += 2 * Math.PI;
+          const full = Math.abs(t1 - t0 - 2 * Math.PI) < 1e-6;
+          const a = Math.hypot(mx, my), ang = Math.atan2(my, mx), b = a * ratio;
+          const n = Math.max(12, Math.ceil((t1 - t0) / (5 * DEG))), pts = [];
+          for (let k = 0; k <= (full ? n - 1 : n); k++) {
+            const t = t0 + (t1 - t0) * k / n, x = a * Math.cos(t), y = b * Math.sin(t);
+            pts.push([cx + x * Math.cos(ang) - y * Math.sin(ang), cy + x * Math.sin(ang) + y * Math.cos(ang)]);
+          }
+          add(layer, pts, full); break;
+        }
+        case 'LWPOLYLINE': {
+          const verts = []; let flags = 0;
+          for (const [k, v] of c) {
+            if (k === 70) flags = parseInt(v, 10);
+            else if (k === 10) verts.push({ x: parseFloat(v), y: 0, b: 0 });
+            else if (k === 20 && verts.length) verts[verts.length - 1].y = parseFloat(v);
+            else if (k === 42 && verts.length) verts[verts.length - 1].b = parseFloat(v);
+          }
+          const closed = (flags & 1) === 1;
+          add(layer, expandBulges(verts, closed), closed); break;
+        }
+        case 'POLYLINE': {
+          const flags = parseInt(gs(c, 70, '0'), 10), verts = [];
+          let j = i + 1;
+          for (; j < ents.length && ents[j].type === 'VERTEX'; j++) {
+            const vc = ents[j].codes;
+            verts.push({ x: g(vc, 10), y: g(vc, 20), b: g(vc, 42, 0) });
+          }
+          if (j < ents.length && ents[j].type === 'SEQEND') j++;
+          i = j - 1;
+          const closed = (flags & 1) === 1;
+          if (verts.length > 1) add(layer, expandBulges(verts, closed), closed);
+          break;
+        }
+        case 'SPLINE': {
+          const fit = [], ctrl = []; let flags = 0;
+          for (const [k, v] of c) {
+            if (k === 70) flags = parseInt(v, 10);
+            else if (k === 11) fit.push([parseFloat(v), 0]);
+            else if (k === 21 && fit.length) fit[fit.length - 1][1] = parseFloat(v);
+            else if (k === 10) ctrl.push([parseFloat(v), 0]);
+            else if (k === 20 && ctrl.length) ctrl[ctrl.length - 1][1] = parseFloat(v);
+          }
+          const pts = fit.length > 1 ? fit : ctrl;
+          if (pts.length > 1) { add(layer, pts, (flags & 1) === 1); skipped['SPLINE (yaklaşık)'] = (skipped['SPLINE (yaklaşık)'] || 0) + 1; }
+          break;
+        }
+        case 'VERTEX': case 'SEQEND': break;
+        default: skipped[e.type] = (skipped[e.type] || 0) + 1;
+      }
+    }
+    return { pieces, layers: [...layers], skipped, unitScale: scale };
+  }
+
+  function arcPts(cx, cy, r, a0, a1) {
+    const n = Math.max(4, Math.ceil((a1 - a0) / (5 * DEG))), pts = [];
+    for (let k = 0; k <= n; k++) { const a = a0 + (a1 - a0) * k / n; pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); }
+    return pts;
+  }
+
+  function expandBulges(verts, closed) {
+    const out = [], n = verts.length;
+    const segs = closed ? n : n - 1;
+    for (let i = 0; i < segs; i++) {
+      const p = verts[i], q = verts[(i + 1) % n];
+      out.push([p.x, p.y]);
+      if (Math.abs(p.b) > 1e-9) {
+        const arc = bulgeArc([p.x, p.y], [q.x, q.y], p.b);
+        for (let k = 1; k < arc.length - 1; k++) out.push(arc[k]);
+      }
+    }
+    if (!closed) out.push([verts[n - 1].x, verts[n - 1].y]);
+    return out;
+  }
+
+  function bulgeArc(p, q, b) {
+    const th = 4 * Math.atan(b), dx = q[0] - p[0], dy = q[1] - p[1], d = Math.hypot(dx, dy);
+    if (d < 1e-12) return [p, q];
+    const r = d / (2 * Math.sin(th / 2)), h = r * Math.cos(th / 2);
+    const mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2, nx = -dy / d, ny = dx / d;
+    const cx = mx + nx * h, cy = my + ny * h, R = Math.abs(r);
+    const a0 = Math.atan2(p[1] - cy, p[0] - cx);
+    const n = Math.max(4, Math.ceil(Math.abs(th) / (5 * DEG))), pts = [];
+    for (let k = 0; k <= n; k++) { const a = a0 + th * k / n; pts.push([cx + R * Math.cos(a), cy + R * Math.sin(a)]); }
+    return pts;
+  }
+
+  /* ---------- Kapalı kontur bulma ---------- */
+  function buildLoops(pieces, tol) {
+    const loops = [], open = [];
+    for (const p of pieces) {
+      const pts = dedupe(p.pts, tol * 0.1);
+      if (pts.length < 2) continue;
+      if (p.closed) { if (pts.length > 2) loops.push(pts); }
+      else open.push(pts);
+    }
+    const eq = (a, b) => Math.abs(a[0] - b[0]) <= tol && Math.abs(a[1] - b[1]) <= tol;
+    const cell = tol * 4, key = (x, y) => Math.round(x / cell) + ',' + Math.round(y / cell);
+    const grid = new Map();
+    const put = (pt, idx, endFlag) => { const k = key(pt[0], pt[1]); if (!grid.has(k)) grid.set(k, []); grid.get(k).push([idx, endFlag]); };
+    open.forEach((s, i) => { put(s[0], i, 0); put(s[s.length - 1], i, 1); });
+    const used = new Array(open.length).fill(false);
+    const find = pt => {
+      const cx = Math.round(pt[0] / cell), cy = Math.round(pt[1] / cell);
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+        const lst = grid.get((cx + dx) + ',' + (cy + dy)); if (!lst) continue;
+        for (const [idx, ef] of lst) {
+          if (used[idx]) continue;
+          const s = open[idx], ep = ef ? s[s.length - 1] : s[0];
+          if (eq(ep, pt)) return [idx, ef];
+        }
+      }
+      return null;
+    };
+    let dropped = 0;
+    for (let i = 0; i < open.length; i++) {
+      if (used[i]) continue;
+      used[i] = true;
+      let chain = open[i].slice();
+      let closed = eq(chain[0], chain[chain.length - 1]) && chain.length > 2;
+      while (!closed) {
+        const m = find(chain[chain.length - 1]);
+        if (!m) break;
+        used[m[0]] = true;
+        const s = open[m[0]];
+        chain = chain.concat(m[1] === 0 ? s.slice(1) : s.slice(0, -1).reverse());
+        closed = eq(chain[0], chain[chain.length - 1]) && chain.length > 3;
+      }
+      if (closed) { chain.pop(); loops.push(dedupe(chain, tol * 0.1)); } else dropped++;
+    }
+    return { loops: loops.filter(l => l.length > 2), dropped };
+  }
+
+  function dedupe(pts, eps) {
+    const out = [];
+    for (const p of pts) { const l = out[out.length - 1]; if (!l || Math.hypot(p[0] - l[0], p[1] - l[1]) > eps) out.push(p); }
+    return out;
+  }
+
+  /* ---------- Poligon araçları ---------- */
+  function sArea(pts) { let a = 0; for (let i = 0, n = pts.length; i < n; i++) { const p = pts[i], q = pts[(i + 1) % n]; a += p[0] * q[1] - q[0] * p[1]; } return a / 2; }
+  function perim(pts) { let s = 0; for (let i = 0, n = pts.length; i < n; i++) { const p = pts[i], q = pts[(i + 1) % n]; s += Math.hypot(q[0] - p[0], q[1] - p[1]); } return s; }
+  function inside(pt, poly) {
+    let c = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const a = poly[i], b = poly[j];
+      if (((a[1] > pt[1]) !== (b[1] > pt[1])) && (pt[0] < (b[0] - a[0]) * (pt[1] - a[1]) / (b[1] - a[1]) + a[0])) c = !c;
+    }
+    return c;
+  }
+  function bbox(pts) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const [x, y] of pts) { if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; }
+    return { x0, y0, x1, y1, w: x1 - x0, h: y1 - y0 };
+  }
+
+  /* Parça: en büyük kontur dış hat, içindekiler delik */
+  function analyze(loops) {
+    if (!loops.length) throw new Error('Kapalı kontur bulunamadı. Parça dış hattının kapalı çizildiğinden emin olun.');
+    const L = loops.map(p => ({ p, a: Math.abs(sArea(p)) })).sort((a, b) => b.a - a.a);
+    let outer = L[0].p;
+    if (sArea(outer) < 0) outer = outer.slice().reverse();
+    const holes = []; let outside = 0, nested = 0;
+    for (let i = 1; i < L.length; i++) {
+      const lp = L[i].p, probe = lp[0];
+      if (!inside(probe, outer)) { outside++; continue; }
+      if (holes.some(h => inside(probe, h))) { nested++; continue; }
+      holes.push(sArea(lp) > 0 ? lp.slice().reverse() : lp);
+    }
+    const area = Math.abs(sArea(outer)) - holes.reduce((s, h) => s + Math.abs(sArea(h)), 0);
+    const per = perim(outer) + holes.reduce((s, h) => s + perim(h), 0);
+    return { outer, holes, area, perimeter: per, pierces: holes.length + 1, bb: bbox(outer), outside, nested };
+  }
+
+  /* Uzatma (kalınlık) geometrisi */
+  function extrudeGeo(part, t) {
+    return { kind: 'ext', V: part.area * t, S: 2 * part.area + part.perimeter * t, A: part.area, P: part.perimeter, t, w: part.bb.w, h: part.bb.h, pierces: part.pierces };
+  }
+
+  /* Döndürme (torna) geometrisi: Pappus */
+  function clipAbove(poly, ax) {
+    const out = [], n = poly.length;
+    for (let i = 0; i < n; i++) {
+      const p = poly[i], q = poly[(i + 1) % n], pin = p[1] >= ax, qin = q[1] >= ax;
+      if (pin) out.push(p);
+      if (pin !== qin) { const t = (ax - p[1]) / (q[1] - p[1]); out.push([p[0] + t * (q[0] - p[0]), ax]); }
+    }
+    return out;
+  }
+  function revolveGeo(part, axisMode, vertical) {
+    const rot = pts => vertical ? pts.map(([x, y]) => [y, x]) : pts;
+    const outer = rot(part.outer), holes = part.holes.map(rot);
+    const bb = bbox(outer);
+    const ax = axisMode === 'alt' ? bb.y0 : axisMode === 'orijin' ? 0 : (bb.y0 + bb.y1) / 2;
+    const moment = poly => {
+      let q = 0;
+      for (let i = 0, n = poly.length; i < n; i++) {
+        const p = poly[i], r = poly[(i + 1) % n];
+        const y0 = p[1] - ax, y1 = r[1] - ax, cr = p[0] * (r[1] - ax) - r[0] * (p[1] - ax);
+        q += (y0 + y1) * cr;
+      }
+      return Math.abs(q / 6);
+    };
+    const surf = poly => {
+      let s = 0;
+      for (let i = 0, n = poly.length; i < n; i++) {
+        const p = poly[i], r = poly[(i + 1) % n], y0 = p[1] - ax, y1 = r[1] - ax;
+        if (y0 < 1e-9 && y1 < 1e-9) continue;
+        s += 2 * Math.PI * (y0 + y1) / 2 * Math.hypot(r[0] - p[0], r[1] - p[1]);
+      }
+      return s;
+    };
+    const co = clipAbove(outer, ax);
+    if (co.length < 3) throw new Error('Eksenin üstünde profil kalmadı. Eksen seçimini değiştirin.');
+    const ch = holes.map(h => clipAbove(h, ax)).filter(h => h.length > 2);
+    const V = 2 * Math.PI * (moment(co) - ch.reduce((s, h) => s + moment(h), 0));
+    const S = surf(co) + ch.reduce((s, h) => s + surf(h), 0);
+    const cb = bbox(co);
+    return { kind: 'rev', V, S, maxD: 2 * (cb.y1 - ax), length: cb.w, profile: co.map(([x, y]) => [y - ax, x - (cb.x0 + cb.x1) / 2]) };
+  }
+
+  /* ---------- Maliyet ---------- */
+  const STD_BAR = [6, 8, 10, 12, 14, 16, 18, 20, 22, 25, 28, 30, 32, 35, 38, 40, 42, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 110, 120, 130, 140, 150, 160, 170, 180, 200, 220, 250, 280, 300, 350, 400];
+  const nextBar = d => STD_BAR.find(s => s >= d) || Math.ceil(d / 10) * 10;
+  const kg = (mm3, rho) => mm3 * rho / 1e6;
+
+  /* Her hesap: parça başı sabit (perPiece) + parti başı (perBatch) kalemler döner */
+  function costSac(geo, mat, p, rate) {
+    const partKg = kg(geo.V, mat.rho), matKg = partKg * (1 + p.fire / 100);
+    const cutMin = geo.P / p.speed + geo.pierces * p.pierceSec / 60;
+    const lines = [
+      ['Malzeme (' + fmt(matKg, 2) + ' kg, fire dahil)', matKg * mat.price],
+      ['Kesim (' + fmt(geo.P / 1000, 2) + ' m, ' + geo.pierces + ' delme, ' + fmt(cutMin, 1) + ' dk)', cutMin / 60 * rate],
+    ];
+    if (p.bends > 0) lines.push(['Bükme (' + p.bends + ' adet)', p.bends * p.bendPrice]);
+    return { partKg, rawKg: matKg, lines, batch: [['Makine ayarı (' + p.setupMin + ' dk)', p.setupMin / 60 * rate]], info: [] };
+  }
+
+  function costTorna(geo, mat, p, rate) {
+    const partKg = kg(geo.V, mat.rho);
+    const D = nextBar(geo.maxD + p.diaAllow), L = geo.length + p.lenAllow;
+    const stockV = Math.PI * D * D / 4 * L, stockKg = kg(stockV, mat.rho);
+    const chip = Math.max(0, stockV - geo.V) / 1000;
+    const mMin = chip / p.mrr + p.finishMin;
+    return {
+      partKg, rawKg: stockKg,
+      lines: [['Hammadde Ø' + D + ' × ' + fmt(L, 0) + ' mm (' + fmt(stockKg, 2) + ' kg)', stockKg * mat.price],
+              ['Talaşlı işleme (' + fmt(chip, 0) + ' cm³ talaş, ' + fmt(mMin, 1) + ' dk)', mMin / 60 * rate]],
+      batch: [['Bağlama ve ayar (' + p.setupMin + ' dk)', p.setupMin / 60 * rate]],
+      info: [['Standart çubuk', 'Ø' + D + ' mm'], ['Kesim boyu', fmt(L, 0) + ' mm']]
+    };
+  }
+
+  function costFreze(geo, mat, p, rate) {
+    const partKg = kg(geo.V, mat.rho);
+    const W = geo.w + 2 * p.allow, H = geo.h + 2 * p.allow, T = geo.t + p.tAllow;
+    const stockV = W * H * T, stockKg = kg(stockV, mat.rho);
+    const chip = Math.max(0, stockV - geo.V) / 1000;
+    const mMin = chip / p.mrr + p.finishMin;
+    return {
+      partKg, rawKg: stockKg,
+      lines: [['Hammadde ' + fmt(W, 0) + '×' + fmt(H, 0) + '×' + fmt(T, 0) + ' mm (' + fmt(stockKg, 2) + ' kg)', stockKg * mat.price],
+              ['Talaşlı işleme (' + fmt(chip, 0) + ' cm³ talaş, ' + fmt(mMin, 1) + ' dk)', mMin / 60 * rate]],
+      batch: [['Bağlama ve ayar (' + p.setupMin + ' dk)', p.setupMin / 60 * rate]],
+      info: [['Ham blok', fmt(W, 0) + '×' + fmt(H, 0) + '×' + fmt(T, 0) + ' mm']]
+    };
+  }
+
+  function costDokum(geo, mat, m, p, rate) {
+    const partKg = kg(geo.V, mat.rho);
+    const rawV = geo.V + geo.S * (p.machinedPct / 100) * m.pay;
+    const hamKg = kg(rawV, mat.rho), dokKg = hamKg / (m.verim / 100);
+    const red = Math.min(0.9, m.red / 100);
+    const metal = hamKg * (1 + m.fire / 100) * mat.price, erg = dokKg * m.ergitme;
+    const pre = [
+      ['Metal (' + fmt(hamKg, 2) + ' kg ham döküm)', metal],
+      ['Ergitme (' + fmt(dokKg, 2) + ' kg dökülen, verim %' + m.verim + ')', erg],
+      ['Kalıplama ve maça', m.kalip],
+      ['Temizleme ve taşlama', hamKg * m.temiz],
+    ];
+    if (p.isil > 0) pre.push(['Isıl işlem', hamKg * p.isil]);
+    const preSum = pre.reduce((s, l) => s + l[1], 0);
+    const lines = pre.slice();
+    if (red > 0) lines.push(['Hurda/red payı (%' + m.red + ')', preSum / (1 - red) - preSum]);
+    if (p.islemeMin > 0) lines.push(['Döküm sonrası işleme (' + p.islemeMin + ' dk)', p.islemeMin / 60 * rate]);
+    const Mcm = geo.V / geo.S / 10;
+    return {
+      partKg, rawKg: hamKg, lines,
+      batch: m.model > 0 ? [['Model / kalıp yatırımı', m.model]] : [],
+      info: [['Dökülen metal', fmt(dokKg, 2) + ' kg'], ['Döküm modülü (V/A)', fmt(Mcm, 2) + ' cm'],
+             ['Besleyici ön önerisi', 'Ø' + fmt(6 * 1.2 * Mcm * 10, 0) + ' mm silindir (H=D)'],
+             ['Model ölçü katsayısı', '× ' + fmt(1 + m.cekme / 100, 3) + ' (çekme %' + m.cekme + ')']]
+    };
+  }
+
+  /* Ortak bitiriş + adet kırılımı */
+  function finalize(base, geo, fin, prof, qtys) {
+    const lines = base.lines.slice();
+    if (fin.boya) lines.push(['Boya (' + fmt(geo.S / 1e6, 3) + ' m²)', geo.S / 1e6 * prof.boyaM2]);
+    if (fin.galv) lines.push(['Galvaniz', base.partKg * prof.galvKg]);
+    const piece = lines.reduce((s, l) => s + l[1], 0);
+    const batch = base.batch.reduce((s, l) => s + l[1], 0);
+    const k = (1 + prof.overhead / 100) * (1 + prof.profit / 100);
+    const rows = qtys.map(q => {
+      const unit = (piece + batch / q) * k;
+      return { q, unit, total: unit * q, vat: unit * q * prof.vat / 100 };
+    });
+    return { ...base, lines, piece, batchSum: batch, k, rows };
+  }
+
+  function fmt(n, d = 2) {
+    if (!isFinite(n)) return '–';
+    return n.toLocaleString('tr-TR', { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+
+  /* ---------- Örnek çizimler ---------- */
+  function dxfDoc(ents) { return '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n70\n4\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n' + ents.join('') + '0\nENDSEC\n0\nEOF\n'; }
+  const L_ = (x1, y1, x2, y2, ly = 'KONTUR') => `0\nLINE\n8\n${ly}\n10\n${x1}\n20\n${y1}\n11\n${x2}\n21\n${y2}\n`;
+  const C_ = (x, y, r, ly = 'KONTUR') => `0\nCIRCLE\n8\n${ly}\n10\n${x}\n20\n${y}\n40\n${r}\n`;
+  const A_ = (x, y, r, a0, a1, ly = 'KONTUR') => `0\nARC\n8\n${ly}\n10\n${x}\n20\n${y}\n40\n${r}\n50\n${a0}\n51\n${a1}\n`;
+  const P_ = (pts, closed, ly = 'KONTUR') => `0\nLWPOLYLINE\n8\n${ly}\n90\n${pts.length}\n70\n${closed ? 1 : 0}\n` + pts.map(p => `10\n${p[0]}\n20\n${p[1]}\n` + (p[2] ? `42\n${p[2]}\n` : '')).join('');
+  const samples = {
+    flans: () => {
+      const e = [C_(0, 0, 60), C_(0, 0, 20)];
+      for (let k = 0; k < 4; k++) { const a = Math.PI / 4 + k * Math.PI / 2; e.push(C_(42 * Math.cos(a), 42 * Math.sin(a), 6)); }
+      return dxfDoc(e);
+    },
+    braket: () => dxfDoc([
+      L_(0, 0, 140, 0), L_(140, 0, 140, 60), A_(120, 60, 20, 0, 90), L_(120, 80, 0, 80), L_(0, 80, 0, 0),
+      C_(25, 40, 8), C_(105, 30, 8), L_(-10, 40, 150, 40, 'EKSEN')
+    ]),
+    mil: () => dxfDoc([
+      P_([[0, -20], [30, -20], [30, -15], [110, -15], [110, -10], [150, -10], [150, 10], [110, 10], [110, 15], [30, 15], [30, 20], [0, 20]], true),
+      L_(-10, 0, 160, 0, 'EKSEN')
+    ]),
+  };
+
+  return { parseDXF, buildLoops, analyze, extrudeGeo, revolveGeo, costSac, costTorna, costFreze, costDokum, finalize, fmt, samples, sArea, bbox };
+})();
+
+
+</script>
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const fmt = Core.fmt;
+const tl = n => fmt(n, 2) + ' TL';
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ---------- Ticari plan kancası (v1: hepsi açık) ---------- */
+const PLAN = { pro: true };
+
+/* ---------- Varsayılanlar (örnek değerler) ---------- */
+const DEF_MATS = [
+  { id: 'st37', name: 'St37 / S235 çelik', rho: 7.85, price: 40, mrr: 15 },
+  { id: 'c45', name: 'C45 imalat çeliği', rho: 7.85, price: 45, mrr: 12 },
+  { id: 'ss304', name: '304 paslanmaz', rho: 7.93, price: 160, mrr: 8 },
+  { id: 'ss316', name: '316 paslanmaz', rho: 7.98, price: 200, mrr: 7 },
+  { id: 'al6061', name: 'Alüminyum 6061', rho: 2.70, price: 220, mrr: 40 },
+  { id: 'al7075', name: 'Alüminyum 7075', rho: 2.81, price: 350, mrr: 35 },
+  { id: 'brass', name: 'Pirinç', rho: 8.50, price: 400, mrr: 30 },
+  { id: 'cu', name: 'Bakır', rho: 8.96, price: 500, mrr: 20 },
+  { id: 'pom', name: 'POM (Delrin)', rho: 1.41, price: 300, mrr: 50 },
+  { id: 'pa6', name: 'PA6 (naylon)', rho: 1.14, price: 250, mrr: 50 },
+  { id: 'gg25', name: 'Gri dökme demir GG25', rho: 7.20, price: 30, mrr: 20, dokum: true, cekme: 1.0 },
+  { id: 'ggg40', name: 'Sfero döküm GGG40', rho: 7.10, price: 35, mrr: 15, dokum: true, cekme: 0.8 },
+  { id: 'gs', name: 'Döküm çeliği', rho: 7.85, price: 45, mrr: 12, dokum: true, cekme: 2.0 },
+  { id: 'alsi', name: 'Alüminyum döküm (AlSi)', rho: 2.68, price: 150, mrr: 40, dokum: true, cekme: 1.2 },
+  { id: 'zamak', name: 'Zamak', rho: 6.70, price: 200, mrr: 30, dokum: true, cekme: 0.7 },
+  { id: 'cusn', name: 'Bronz döküm', rho: 8.80, price: 450, mrr: 20, dokum: true, cekme: 1.5 },
+  { id: 'cuzn', name: 'Pirinç döküm', rho: 8.50, price: 400, mrr: 30, dokum: true, cekme: 1.5 },
+];
+const DEF_METHODS = [
+  { id: 'yasEl', name: 'Yaş kum (elle kalıplama)', verim: 60, pay: 3, red: 5, kalip: 80, model: 15000 },
+  { id: 'yasOto', name: 'Yaş kum (otomatik hat)', verim: 70, pay: 2.5, red: 3, kalip: 20, model: 60000 },
+  { id: 'recine', name: 'Reçineli / furanlı kum', verim: 55, pay: 4, red: 5, kalip: 150, model: 20000 },
+  { id: 'kabuk', name: 'Kabuk (shell) kalıp', verim: 70, pay: 1.5, red: 3, kalip: 40, model: 80000 },
+  { id: 'kokil', name: 'Kokil (yerçekimli)', verim: 75, pay: 1.5, red: 3, kalip: 10, model: 150000 },
+  { id: 'alcak', name: 'Alçak basınçlı', verim: 85, pay: 1.5, red: 3, kalip: 15, model: 400000 },
+  { id: 'pres', name: 'Yüksek basınçlı (pres döküm)', verim: 70, pay: 0.5, red: 2, kalip: 5, model: 1000000 },
+  { id: 'hassas', name: 'Hassas döküm (mum)', verim: 45, pay: 0.5, red: 4, kalip: 120, model: 120000 },
+  { id: 'santrifuj', name: 'Santrifüj', verim: 80, pay: 3, red: 3, kalip: 30, model: 40000 },
+  { id: 'kopuk', name: 'Kayıp köpük', verim: 75, pay: 2, red: 4, kalip: 60, model: 20000 },
+].map(m => ({ on: true, ergitme: 10, temiz: 5, fire: 3, ...m }));
+const DEF_PROF = {
+  firma: '', tel: '', mail: '', adres: '', logo: '',
+  rates: { lazer: 3000, torna: 1200, freze: 1500, isleme: 1200 },
+  overhead: 15, profit: 20, vat: 20, boyaM2: 150, galvKg: 30, bendPrice: 15,
+  materials: DEF_MATS, methods: DEF_METHODS, saved: false, theme: 'auto'
+};
+const DEF_PARAMS = {
+  sac: { t: 5, fire: 15, speed: 2000, pierceSec: 2, bends: 0, setupMin: 15 },
+  torna: { axis: 'orta', vert: 0, diaAllow: 3, lenAllow: 5, mrr: 15, finishMin: 5, setupMin: 20 },
+  freze: { t: 20, allow: 3, tAllow: 3, mrr: 9, finishMin: 10, setupMin: 30 },
+  dokum: { shape: 'ext', t: 20, axis: 'orta', vert: 0, method: 'yasEl', machinedPct: 30, isil: 0, islemeMin: 0 },
+};
+
+/* ---------- Depolama ---------- */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('tornaly.' + k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('tornaly.' + k, JSON.stringify(v)); return true; } catch { return false; } }
+};
+const clone = o => JSON.parse(JSON.stringify(o));
+let prof = Object.assign(clone(DEF_PROF), store.get('profile', {}));
+const mergeById = (defs, saved) => { const m = new Map((saved || []).map(x => [x.id, x])); return defs.map(d => ({ ...d, ...(m.get(d.id) || {}) })); };
+prof.materials = mergeById(DEF_MATS, prof.materials);
+prof.methods = mergeById(DEF_METHODS, prof.methods);
+prof.rates = { ...DEF_PROF.rates, ...prof.rates };
+
+const state = {
+  proc: 'sac', params: clone(DEF_PARAMS), mat: { sac: 'st37', torna: 'c45', freze: 'al6061', dokum: 'gg25' },
+  pieces: null, layerOn: {}, part: null, geo: null, res: null, fileName: '', msgs: [], geoSig: ''
+};
+
+/* ---------- Toast ---------- */
+let tT;
+function toast(t) { const e = $('#toast'); e.textContent = t; e.classList.add('on'); clearTimeout(tT); tT = setTimeout(() => e.classList.remove('on'), 2200); }
+
+/* ---------- Sekmeler ---------- */
+document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => showView(b.dataset.v));
+function showView(v) {
+  document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === v));
+  document.querySelectorAll('section.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
+  if (v === 'teklif') renderQuote();
+  if (v === 'gecmis') renderHistory();
+  if (v === 'hesap') viewer.resize();
+  window.scrollTo(0, 0);
+}
+
+/* ---------- DXF yükleme ---------- */
+$('#dxfIn').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => loadDXF(r.result, f.name);
+  r.onerror = () => showMsgs([['err', 'Dosya okunamadı. Tekrar seçin.']]);
+  r.readAsText(f);
+  e.target.value = '';
+};
+$('#sampleSel').onchange = e => {
+  const k = e.target.value; if (!k) return;
+  e.target.value = '';
+  const proc = { braket: 'sac', flans: 'dokum', mil: 'torna' }[k];
+  if (k === 'flans') state.params.dokum.shape = 'ext';
+  setProc(proc, true);
+  loadDXF(Core.samples[k](), { braket: 'Örnek sac braket', flans: 'Örnek flanş', mil: 'Örnek kademeli mil' }[k]);
+};
+
+function loadDXF(text, name) {
+  try {
+    const d = Core.parseDXF(text);
+    state.pieces = d.pieces; state.fileName = name.replace(/\.dxf$/i, '');
+    state.skipped = d.skipped;
+    state.layerOn = {};
+    d.layers.forEach(l => state.layerOn[l] = !/^(dim|ölçü|olcu|olçu|text|yaz|eksen|center|axis|hatch|tarama|defpoints)/i.test(l));
+    if (!Object.values(state.layerOn).some(Boolean)) d.layers.forEach(l => state.layerOn[l] = true);
+    renderLayers();
+    rebuildPart();
+    if (!$('#qPart').value || $('#qPart').value === state.autoName) { $('#qPart').value = state.fileName; state.autoName = state.fileName; }
+  } catch (err) {
+    state.part = null; showMsgs([['err', err.message]]); recompute();
+  }
+}
+
+function renderLayers() {
+  const names = Object.keys(state.layerOn);
+  $('#layerBox').hidden = names.length < 2;
+  $('#layers').innerHTML = names.map(n => `<label class="chk"><input type="checkbox" data-l="${esc(n)}" ${state.layerOn[n] ? 'checked' : ''}> ${esc(n)}</label>`).join('');
+  $('#layers').querySelectorAll('input').forEach(i => i.onchange = () => { state.layerOn[i.dataset.l] = i.checked; rebuildPart(); });
+}
+
+function rebuildPart() {
+  const msgs = [];
+  const pcs = state.pieces.filter(p => state.layerOn[p.layer]);
+  try {
+    let all = []; pcs.forEach(p => all = all.concat(p.pts.length > 200 ? p.pts.filter((_, i) => i % 10 === 0) : p.pts));
+    if (!all.length) throw new Error('Seçili katmanlarda çizim yok.');
+    const bb = Core.bbox(all), tol = Math.max(0.05, Math.hypot(bb.w, bb.h) * 2e-5);
+    const { loops, dropped } = Core.buildLoops(pcs, tol);
+    state.part = Core.analyze(loops);
+    msgs.push(['ok', `${state.fileName}: ${state.part.holes.length} iç kontur (delik), dış ölçü ${fmt(state.part.bb.w, 1)} × ${fmt(state.part.bb.h, 1)} mm`]);
+    if (dropped) msgs.push(['warn', `${dropped} açık çizgi yok sayıldı (eksen, ölçü çizgisi gibi). Parça hattında açık kalan yer varsa uçları birleştirin.`]);
+    if (state.part.outside) msgs.push(['warn', `Dış hattın dışında ${state.part.outside} kontur daha var. Sadece en büyük parça hesaplandı; diğer görünüşleri katmandan kapatabilirsiniz.`]);
+    if (state.part.nested) msgs.push(['warn', `Delik içinde ${state.part.nested} ada kontur yok sayıldı.`]);
+  } catch (err) { state.part = null; msgs.push(['err', err.message]); }
+  const sk = state.skipped || {};
+  if (sk.INSERT) msgs.push(['warn', `${sk.INSERT} blok (INSERT) okunmadı. AutoCAD'de PATLAT komutuyla blokları açıp tekrar kaydedin.`]);
+  if (sk['SPLINE (yaklaşık)']) msgs.push(['warn', 'Spline eğriler yaklaşık okundu; ölçüler küçük sapma gösterebilir.']);
+  showMsgs(msgs);
+  state.geoSig = '';
+  recompute();
+}
+
+function showMsgs(m) { $('#fileInfo').innerHTML = m.map(([k, t]) => `<p class="${k === 'err' ? 'err' : ''}" ${k === 'ok' ? 'style="border-left-color:var(--steel)"' : ''}>${esc(t)}</p>`).join(''); }
+
+/* ---------- İşlem seçimi ---------- */
+document.querySelectorAll('#procSeg button').forEach(b => b.onclick = () => setProc(b.dataset.p));
+function setProc(p, silent) {
+  state.proc = p;
+  document.querySelectorAll('#procSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.p === p));
+  renderGeoFields(); renderMatSel(); renderProcFields();
+  state.geoSig = '';
+  if (!silent) recompute();
+}
+
+const num = (k, label, unit, step = 'any', hint = '') => {
+  const v = state.params[state.proc][k];
+  return `<label class="f"><span>${label}</span><div class="in"><input type="number" inputmode="decimal" step="${step}" data-k="${k}" value="${v}"><em>${unit}</em></div>${hint ? `<small>${hint}</small>` : ''}</label>`;
+};
+const segHtml = (k, opts) => {
+  const v = state.params[state.proc][k];
+  return `<div class="seg two" data-segk="${k}">` + opts.map(([val, lbl]) => `<button data-val="${val}" aria-pressed="${String(v) === String(val)}">${lbl}</button>`).join('') + '</div>';
+};
+function bindInputs(root) {
+  root.querySelectorAll('input[data-k]').forEach(i => i.oninput = () => {
+    const v = parseFloat(i.value.replace(',', '.'));
+    if (!isNaN(v)) { state.params[state.proc][i.dataset.k] = v; recompute(); }
+  });
+  root.querySelectorAll('select[data-k]').forEach(s => s.onchange = () => { state.params[state.proc][s.dataset.k] = s.value; recompute(); });
+  root.querySelectorAll('[data-segk]').forEach(seg => seg.querySelectorAll('button').forEach(b => b.onclick = () => {
+    const k = seg.dataset.segk, val = isNaN(+b.dataset.val) ? b.dataset.val : +b.dataset.val;
+    state.params[state.proc][k] = val;
+    if (seg.closest('#geoFields')) renderGeoFields(); else renderProcFields();
+    state.geoSig = ''; recompute();
+  }));
+}
+
+function renderGeoFields() {
+  const p = state.proc, P = state.params[p]; let h = '';
+  const revBlock = () => `<div class="grid"><div><small>Dönme ekseni</small>${segHtml('axis', [['orta', 'Çizim ortası'], ['alt', 'Alt kenar'], ['orijin', 'X ekseni']])}</div>
+    <div><small>Eksen yönü</small>${segHtml('vert', [[0, 'Yatay'], [1, 'Dikey']])}</div></div>
+    <p class="note">Tam görünüşte "çizim ortası", yarım profilde "alt kenar" seçin. Delikli dönel parçanın (burç gibi) yarım profilini eksen X ekseni üzerinde çizdiyseniz "X ekseni" seçin.</p>`;
+  if (p === 'sac') h = `<div class="grid">${num('t', 'Sac kalınlığı', 'mm')}</div>`;
+  else if (p === 'freze') h = `<div class="grid">${num('t', 'Parça yüksekliği', 'mm')}</div>`;
+  else if (p === 'torna') h = revBlock();
+  else {
+    h = `<small>Parça şekli</small>${segHtml('shape', [['ext', 'Prizmatik (kalınlık)'], ['rev', 'Dönel (eksenel)']])}<div style="margin-top:10px"></div>`;
+    h += P.shape === 'rev' ? revBlock() : `<div class="grid">${num('t', 'Parça kalınlığı', 'mm')}</div>`;
+  }
+  $('#geoFields').innerHTML = h; bindInputs($('#geoFields'));
+}
+
+function renderMatSel() {
+  const forDokum = state.proc === 'dokum';
+  const a = prof.materials.filter(m => !!m.dokum === forDokum), b = prof.materials.filter(m => !!m.dokum !== forDokum);
+  const opt = m => `<option value="${m.id}">${esc(m.name)}</option>`;
+  $('#matSel').innerHTML = `<optgroup label="${forDokum ? 'Döküm alaşımları' : 'İşlenen malzemeler'}">${a.map(opt).join('')}</optgroup><optgroup label="Diğer">${b.map(opt).join('')}</optgroup>`;
+  $('#matSel').value = state.mat[state.proc];
+}
+$('#matSel').onchange = () => {
+  state.mat[state.proc] = $('#matSel').value;
+  const m = curMat();
+  if (state.proc === 'torna') state.params.torna.mrr = m.mrr;
+  if (state.proc === 'freze') state.params.freze.mrr = +(m.mrr * 0.6).toFixed(1);
+  renderProcFields(); recompute();
+};
+const curMat = () => prof.materials.find(m => m.id === state.mat[state.proc]) || prof.materials[0];
+
+function renderProcFields() {
+  const p = state.proc; let h = '';
+  if (p === 'sac') h = num('fire', 'Fire / nesting kaybı', '%') + num('speed', 'Kesim hızı', 'mm/dk', 'any', 'Malzeme ve kalınlığa göre') + num('pierceSec', 'Delme süresi', 'sn') + num('bends', 'Bükme sayısı', 'adet', '1') + num('setupMin', 'Makine ayarı', 'dk');
+  if (p === 'torna') h = num('diaAllow', 'Çap payı', 'mm') + num('lenAllow', 'Boy + kesim payı', 'mm') + num('mrr', 'Talaş kaldırma', 'cm³/dk') + num('finishMin', 'Finiş ve kontrol', 'dk') + num('setupMin', 'Bağlama ve ayar', 'dk');
+  if (p === 'freze') h = num('allow', 'Kenar payı (her yön)', 'mm') + num('tAllow', 'Yükseklik payı', 'mm') + num('mrr', 'Talaş kaldırma', 'cm³/dk') + num('finishMin', 'Finiş ve kontrol', 'dk') + num('setupMin', 'Bağlama ve ayar', 'dk');
+  if (p === 'dokum') {
+    const ms = prof.methods.filter(m => m.on);
+    if (!ms.find(m => m.id === state.params.dokum.method) && ms.length) state.params.dokum.method = ms[0].id;
+    h = `<label class="f" style="grid-column:1/-1"><span>Döküm yöntemi</span><div class="in"><select data-k="method">${ms.map(m => `<option value="${m.id}" ${m.id === state.params.dokum.method ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</select></div><small>Yöntemlerin oranları Ayarlar'dan düzenlenir.</small></label>`;
+    h += num('machinedPct', 'İşlenecek yüzey oranı', '%') + num('islemeMin', 'Döküm sonrası işleme', 'dk') + num('isil', 'Isıl işlem', 'TL/kg');
+  }
+  $('#procFields').innerHTML = h; bindInputs($('#procFields'));
+}
+
+['#qtys', '#finBoya', '#finGalv'].forEach(s => $(s).addEventListener(s === '#qtys' ? 'input' : 'change', () => recompute()));
+const qtys = () => { const q = $('#qtys').value.split(/[,;\s]+/).map(x => parseInt(x, 10)).filter(x => x > 0); return q.length ? [...new Set(q)].slice(0, 6) : [1]; };
+
+/* ---------- Hesap ---------- */
+function makeGeo() {
+  const p = state.proc, P = state.params[p], part = state.part;
+  if (p === 'torna' || (p === 'dokum' && P.shape === 'rev')) return Core.revolveGeo(part, P.axis, !!P.vert);
+  return Core.extrudeGeo(part, Math.max(0.01, P.t));
+}
+
+function recompute() {
+  const out = $('#result');
+  if (!state.part) { state.res = null; out.innerHTML = ''; $('#facts').hidden = true; viewer.clear(); return; }
+  let geo;
+  try { geo = makeGeo(); } catch (err) { state.res = null; out.innerHTML = `<div class="msgs"><p class="err">${esc(err.message)}</p></div>`; viewer.clear(); return; }
+  state.geo = geo;
+  const P = state.params[state.proc], sig = [state.proc, geo.kind, geo.t, P.axis, P.vert, state.part.area, state.part.perimeter].join('|');
+  if (sig !== state.geoSig) { state.geoSig = sig; viewer.show(geo, state.part); }
+
+  const mat = curMat(), R = prof.rates; let base;
+  if (state.proc === 'sac') base = Core.costSac(geo, mat, { ...P, bendPrice: prof.bendPrice }, R.lazer);
+  if (state.proc === 'torna') base = Core.costTorna(geo, mat, P, R.torna);
+  if (state.proc === 'freze') base = Core.costFreze(geo, mat, P, R.freze);
+  if (state.proc === 'dokum') {
+    const m = prof.methods.find(x => x.id === P.method) || prof.methods[0];
+    base = Core.costDokum(geo, mat, { ...m, cekme: mat.cekme ?? 1 }, P, R.isleme);
+  }
+  const res = Core.finalize(base, geo, { boya: $('#finBoya').checked, galv: $('#finGalv').checked }, prof, qtys());
+  state.res = res;
+
+  const facts = [
+    [fmt(geo.V / 1000, 1) + ' cm³', 'Hacim'], [fmt(res.partKg, 3) + ' kg', 'Parça ağırlığı'], [fmt(geo.S / 100, 0) + ' cm²', 'Yüzey alanı'],
+  ];
+  if (geo.kind === 'ext') facts.push([fmt(geo.w, 1) + '×' + fmt(geo.h, 1), 'Ölçü (mm)'], [fmt(geo.P / 1000, 2) + ' m', 'Kontur boyu'], [geo.pierces - 1 + '', 'Delik']);
+  else facts.push(['Ø' + fmt(geo.maxD, 1), 'En büyük çap (mm)'], [fmt(geo.length, 1) + ' mm', 'Boy'], [fmt(res.rawKg, 2) + ' kg', 'Hammadde']);
+  $('#facts').innerHTML = facts.map(([b, s]) => `<div><b>${b}</b><small>${s}</small></div>`).join('');
+  $('#facts').hidden = false;
+
+  const r0 = res.rows[0], last = res.rows[res.rows.length - 1];
+  out.innerHTML = `
+    <div class="plate">
+      <div class="lbl">Birim fiyat, ${r0.q} adet için (KDV hariç)</div>
+      <div class="big">${tl(r0.unit)}</div>
+      <div class="sub"><span>Parça <b>${fmt(res.partKg, 3)} kg</b></span><span>${state.proc === 'dokum' ? 'Ham döküm' : 'Hammadde'} <b>${fmt(res.rawKg, 2)} kg</b></span>${res.rows.length > 1 ? `<span>${last.q} adette <b>${tl(last.unit)}</b></span>` : ''}</div>
+    </div>
+    <div class="tw"><table><thead><tr><th>Adet</th><th>Birim</th><th>Tutar</th><th>KDV dahil</th></tr></thead><tbody>
+      ${res.rows.map(r => `<tr><td>${r.q}</td><td>${tl(r.unit)}</td><td>${tl(r.total)}</td><td>${tl(r.total + r.vat)}</td></tr>`).join('')}
+    </tbody></table></div>
+    <h3>Maliyet dökümü (1 parça)</h3>
+    <div class="tw"><table><tbody>
+      ${res.lines.map(([n, v]) => `<tr><td>${esc(n)}</td><td>${tl(v)}</td></tr>`).join('')}
+      <tr><td><b>Parça başı maliyet</b></td><td><b>${tl(res.piece)}</b></td></tr>
+      ${res.batch.map(([n, v]) => `<tr><td>${esc(n)} <small>(partiye bölünür)</small></td><td>${tl(v)}</td></tr>`).join('')}
+      <tr><td>Genel gider %${prof.overhead} ve kâr %${prof.profit}</td><td>× ${fmt(res.k, 3)}</td></tr>
+    </tbody></table></div>
+    ${res.info.length ? `<h3>Teknik bilgi</h3><div class="tw"><table><tbody>${res.info.map(([a, b]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>`).join('')}</tbody></table></div>` : ''}
+    ${state.proc === 'dokum' ? '<p class="note">Besleyici önerisi, parça modülünün 1,2 katı modüllü silindir besleyici varsayımıyla kaba bir başlangıç değeridir; yolluk tasarımının yerini tutmaz.</p>' : ''}
+    ${!prof.saved ? '<p class="note">Fiyatlar Ayarlar\'daki örnek değerlerle hesaplandı. Kendi malzeme ve saat ücretlerinizi girin.</p>' : ''}
+    <div class="row" style="margin-top:14px"><button class="btn tape" id="toQuote">Teklif hazırla</button></div>`;
+  $('#toQuote').onclick = () => showView('teklif');
+}
+
+/* ---------- 3B görüntüleyici ---------- */
+const viewer = (() => {
+  const cv = $('#cv'), box = $('#viewer');
+  if (typeof THREE === 'undefined') {
+    $('#viewerEmpty').textContent = '3B görüntüleyici yüklenemedi (internet bağlantısı gerekli). Hesaplar yine de çalışır.';
+    return { show() {}, clear() {}, resize() {}, snap() { return ''; } };
+  }
+  const R = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, preserveDrawingBuffer: true });
+  R.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(35, 1, 0.1, 1e6);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x3a4a55, 0.85));
+  const d1 = new THREE.DirectionalLight(0xffffff, 0.75); d1.position.set(1, 1.4, 1.2); scene.add(d1);
+  const d2 = new THREE.DirectionalLight(0xffffff, 0.3); d2.position.set(-1.2, -0.4, -1); scene.add(d2);
+  let grp = null; const sph = { th: 0.7, ph: 1.05, r: 300 };
+  function place() {
+    cam.position.set(sph.r * Math.sin(sph.ph) * Math.sin(sph.th), sph.r * Math.cos(sph.ph), sph.r * Math.sin(sph.ph) * Math.cos(sph.th));
+    cam.lookAt(0, 0, 0); R.render(scene, cam);
+  }
+  function resize() {
+    const w = box.clientWidth, h = box.clientHeight; if (!w) return;
+    R.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); place();
+  }
+  new ResizeObserver(resize).observe(box);
+  function clear() {
+    if (grp) { scene.remove(grp); grp.traverse(o => { o.geometry && o.geometry.dispose(); }); grp = null; }
+    $('#viewerEmpty').hidden = false; $('#viewerHint').hidden = true; R.render(scene, cam);
+  }
+  function show(geo, part) {
+    clear();
+    let g;
+    if (geo.kind === 'ext') {
+      const cx = (part.bb.x0 + part.bb.x1) / 2, cy = (part.bb.y0 + part.bb.y1) / 2;
+      const v2 = pts => pts.map(([x, y]) => new THREE.Vector2(x - cx, y - cy));
+      const sh = new THREE.Shape(v2(part.outer));
+      part.holes.forEach(h => sh.holes.push(new THREE.Path(v2(h))));
+      g = new THREE.ExtrudeGeometry(sh, { depth: geo.t, bevelEnabled: false, curveSegments: 1 });
+      g.translate(0, 0, -geo.t / 2);
+      g.rotateX(-Math.PI / 2);
+    } else {
+      const pts = geo.profile.map(([r, h]) => new THREE.Vector2(Math.max(0, r), h));
+      g = new THREE.LatheGeometry(pts, 72);
+      g.rotateZ(Math.PI / 2);
+    }
+    g.computeVertexNormals();
+    grp = new THREE.Group();
+    grp.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0xa9b4ba, metalness: 0.55, roughness: 0.42, side: THREE.DoubleSide })));
+    grp.add(new THREE.LineSegments(new THREE.EdgesGeometry(g, 28), new THREE.LineBasicMaterial({ color: 0x1c2830, transparent: true, opacity: 0.55 })));
+    scene.add(grp);
+    g.computeBoundingSphere();
+    sph.r = g.boundingSphere.radius * 3.3; sph.th = 0.7; sph.ph = 1.0;
+    cam.near = sph.r / 100; cam.far = sph.r * 20; cam.updateProjectionMatrix();
+    $('#viewerEmpty').hidden = true; $('#viewerHint').hidden = false;
+    resize();
+  }
+  // dokunmatik / fare ile çevirme ve yakınlaştırma
+  const pts = new Map(); let pinch = 0;
+  cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); });
+  cv.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId) || !grp) return;
+    const prev = pts.get(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pts.size === 1) {
+      sph.th -= (e.clientX - prev[0]) * 0.01;
+      sph.ph = Math.min(3.05, Math.max(0.08, sph.ph - (e.clientY - prev[1]) * 0.01));
+    } else if (pts.size === 2) {
+      const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+      if (pinch) sph.r *= pinch / d; pinch = d;
+    }
+    place();
+  });
+  const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = 0; };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  cv.addEventListener('wheel', e => { if (!grp) return; e.preventDefault(); sph.r *= e.deltaY > 0 ? 1.1 : 0.9; place(); }, { passive: false });
+  function snap() {
+    if (!grp) return '';
+    R.setClearColor(0xffffff, 1); R.render(scene, cam);
+    const u = cv.toDataURL('image/jpeg', 0.75);
+    R.setClearColor(0x000000, 0); R.render(scene, cam);
+    return u;
+  }
+  return { show, clear, resize, snap };
+})();
+
+/* ---------- Teklif ---------- */
+const PROC_NAME = { sac: 'Sac / lazer kesim', torna: 'Torna', freze: 'Freze', dokum: 'Döküm' };
+let quote = null;
+['#qCust', '#qPart', '#qValid', '#qLead', '#qNote'].forEach(s => $(s).addEventListener('input', () => renderQuoteDoc()));
+['#qBreak', '#qShot'].forEach(s => $(s).addEventListener('change', () => renderQuoteDoc()));
+
+function renderQuote() {
+  if (!state.res) { $('#quoteEmpty').hidden = false; $('#quoteForm').hidden = true; $('#quoteDoc').innerHTML = ''; quote = null; return; }
+  $('#quoteEmpty').hidden = true; $('#quoteForm').hidden = false;
+  const now = new Date(), pad = n => String(n).padStart(2, '0');
+  const P = state.params[state.proc];
+  const methodName = state.proc === 'dokum' ? (prof.methods.find(m => m.id === P.method) || {}).name : '';
+  quote = {
+    no: `T-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`,
+    date: now.toLocaleDateString('tr-TR'), proc: PROC_NAME[state.proc] + (methodName ? ' (' + methodName + ')' : ''),
+    mat: curMat().name, partKg: state.res.partKg, dims: state.geo.kind === 'ext' ? `${fmt(state.geo.w, 1)} × ${fmt(state.geo.h, 1)} × ${fmt(state.geo.t, 1)} mm` : `Ø${fmt(state.geo.maxD, 1)} × ${fmt(state.geo.length, 1)} mm`,
+    rows: state.res.rows, lines: state.res.lines, batch: state.res.batch, vatPct: prof.vat, shot: viewer.snap()
+  };
+  renderQuoteDoc();
+}
+
+function quoteHTML(q, opt) {
+  const f = q.firm || prof;
+  return `<div class="doc">
+    <div class="dh"><div>${f.logo ? `<img src="${f.logo}" alt="">` : ''}<div style="font-weight:600;font-size:1.1rem">${esc(f.firma || 'Firma adınız')}</div>
+      <div style="font-size:.88rem;color:#566771">${[f.adres, f.tel, f.mail].filter(Boolean).map(esc).join('<br>')}</div></div>
+      <div style="text-align:right"><h2>Fiyat teklifi</h2><div style="font-size:.9rem">${q.no}<br>${q.date}</div></div></div>
+    <div class="meta">
+      <div>Müşteri<br><b>${esc(q.cust || '-')}</b></div><div>Parça<br><b>${esc(q.part || '-')}</b></div>
+      <div>İşlem<br><b>${esc(q.proc)}</b></div><div>Malzeme<br><b>${esc(q.mat)}</b></div>
+      <div>Ölçü<br><b>${esc(q.dims)}</b></div><div>Birim ağırlık<br><b>${fmt(q.partKg, 3)} kg</b></div>
+    </div>
+    ${opt.shot && q.shot ? `<img class="shot" src="${q.shot}" alt="Parçanın 3B görünüşü">` : ''}
+    <div class="tw" style="margin-top:12px"><table><thead><tr><th>Adet</th><th>Birim fiyat</th><th>Tutar</th><th>KDV %${q.vatPct}</th><th>Toplam</th></tr></thead><tbody>
+      ${q.rows.map(r => `<tr><td>${r.q}</td><td>${tl(r.unit)}</td><td>${tl(r.total)}</td><td>${tl(r.vat)}</td><td><b>${tl(r.total + r.vat)}</b></td></tr>`).join('')}
+    </tbody></table></div>
+    ${opt.breakdown ? `<h3>Maliyet dökümü (1 parça, gider ve kâr hariç)</h3><table><tbody>${q.lines.concat(q.batch.map(([n, v]) => [n + ' (parti başı)', v])).map(([n, v]) => `<tr><td>${esc(n)}</td><td>${tl(v)}</td></tr>`).join('')}</tbody></table>` : ''}
+    <div class="foot">
+      ${q.lead ? `Teslim süresi: ${esc(q.lead)}<br>` : ''}
+      Bu teklif ${q.valid || 15} gün geçerlidir. Fiyatlara KDV dahil değildir; KDV ayrıca gösterilmiştir.
+      ${q.note ? `<br>${esc(q.note)}` : ''}
+    </div></div>`;
+}
+
+function renderQuoteDoc() {
+  if (!quote) return;
+  Object.assign(quote, { cust: $('#qCust').value, part: $('#qPart').value, valid: $('#qValid').value, lead: $('#qLead').value, note: $('#qNote').value });
+  const opt = { breakdown: $('#qBreak').checked, shot: $('#qShot').checked };
+  $('#quoteDoc').innerHTML = quoteHTML(quote, opt);
+  $('#bWa').href = 'https://wa.me/?text=' + encodeURIComponent(quoteText(quote));
+}
+
+function quoteText(q) {
+  return `${prof.firma || ''} fiyat teklifi ${q.no}\nParça: ${q.part || '-'} (${q.mat}, ${q.proc})\n` +
+    q.rows.map(r => `${r.q} adet: birim ${tl(r.unit)}, toplam ${tl(r.total)} + KDV`).join('\n') + `\nGeçerlilik: ${q.valid || 15} gün`;
+}
+
+const EMBED = (() => { try { return window.self !== window.top; } catch { return true; } })();
+$('#bPrint').onclick = () => {
+  if (EMBED) { toast('PDF için uygulamayı kendi bağlantısından (GitHub) açın'); return; }
+  window.print();
+};
+function ask(msg) {
+  return new Promise(res => {
+    $('#askMsg').textContent = msg; $('#askBox').hidden = false;
+    const done = v => { $('#askBox').hidden = true; res(v); };
+    $('#askYes').onclick = () => done(true); $('#askNo').onclick = () => done(false);
+  });
+}
+$('#bShare').onclick = async () => {
+  if (!quote) return;
+  const text = quoteText(quote);
+  try {
+    if (navigator.share) await navigator.share({ title: 'Fiyat teklifi ' + quote.no, text });
+    else throw 0;
+  } catch (e) {
+    if (e && e.name === 'AbortError') return;
+    try { await navigator.clipboard.writeText(text); toast('Teklif metni kopyalandı'); } catch { toast('Paylaşılamadı; WhatsApp düğmesini kullanın'); }
+  }
+};
+$('#bSave').onclick = () => {
+  if (!quote) return;
+  const h = store.get('history', []);
+  const rec = { ...quote, breakdown: $('#qBreak').checked, showShot: $('#qShot').checked, firm: { firma: prof.firma, tel: prof.tel, mail: prof.mail, adres: prof.adres, logo: prof.logo } };
+  h.unshift(rec);
+  let ok = store.set('history', h.slice(0, 60));
+  if (!ok) { rec.shot = ''; ok = store.set('history', h.slice(0, 40)); }
+  toast(ok ? 'Geçmişe kaydedildi' : 'Kaydedilemedi: cihaz hafızası dolu');
+};
+
+/* ---------- Geçmiş ---------- */
+$('#hSearch').oninput = () => renderHistory();
+function renderHistory() {
+  const h = store.get('history', []), q = $('#hSearch').value.toLocaleLowerCase('tr');
+  const list = h.map((r, i) => [r, i]).filter(([r]) => !q || (r.cust + ' ' + r.part + ' ' + r.no).toLocaleLowerCase('tr').includes(q));
+  $('#histList').innerHTML = list.length ? list.map(([r, i]) => `<li><div><b>${esc(r.part || 'Adsız parça')}</b><br><small>${esc(r.cust || '-')} · ${r.date} · ${esc(r.mat)}</small><br>${r.rows[0].q} adet: ${tl(r.rows[0].unit)}</div>
+    <div class="row" style="flex-wrap:nowrap"><button class="btn" data-open="${i}">Aç</button><button class="btn ghost" data-del="${i}" aria-label="Sil">Sil</button></div></li>`).join('')
+    : `<li><span class="muted">${h.length ? 'Aramaya uyan teklif yok.' : 'Kaydedilen teklifler burada listelenir.'}</span></li>`;
+  $('#histList').querySelectorAll('[data-open]').forEach(b => b.onclick = () => {
+    const r = h[+b.dataset.open]; quote = r;
+    showView('teklif');
+    quote = r;
+    $('#quoteEmpty').hidden = true; $('#quoteForm').hidden = false;
+    $('#qCust').value = r.cust || ''; $('#qPart').value = r.part || ''; $('#qValid').value = r.valid || 15; $('#qLead').value = r.lead || ''; $('#qNote').value = r.note || '';
+    $('#qBreak').checked = !!r.breakdown; $('#qShot').checked = r.showShot !== false;
+    renderQuoteDoc();
+  });
+  $('#histList').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    if (!(await ask('Bu teklif silinsin mi?'))) return;
+    h.splice(+b.dataset.del, 1); store.set('history', h); renderHistory();
+  });
+}
+
+/* ---------- Ayarlar ---------- */
+const RATE_FIELDS = [
+  ['rates.lazer', 'Lazer / plazma', 'TL/saat'], ['rates.torna', 'Torna', 'TL/saat'], ['rates.freze', 'Freze', 'TL/saat'], ['rates.isleme', 'Döküm sonrası işleme', 'TL/saat'],
+  ['overhead', 'Genel gider', '%'], ['profit', 'Kâr', '%'], ['vat', 'KDV', '%'], ['bendPrice', 'Bükme', 'TL/büküm'], ['boyaM2', 'Boya', 'TL/m²'], ['galvKg', 'Galvaniz', 'TL/kg']
+];
+const getP = k => k.split('.').reduce((o, x) => o[x], prof);
+const setP = (k, v) => { const ks = k.split('.'), last = ks.pop(); ks.reduce((o, x) => o[x], prof)[last] = v; };
+
+function renderSettings() {
+  ['firma', 'tel', 'mail', 'adres'].forEach(k => $('#p' + k[0].toUpperCase() + k.slice(1)).value = prof[k] || '');
+  $('#logoPrev').hidden = $('#pLogoDel').hidden = !prof.logo; if (prof.logo) $('#logoPrev').src = prof.logo;
+  $('#profWarn').hidden = !!prof.saved;
+  $('#rateFields').innerHTML = RATE_FIELDS.map(([k, l, u]) => `<label class="f"><span>${l}</span><div class="in"><input type="number" inputmode="decimal" data-pk="${k}" value="${getP(k)}"><em>${u}</em></div></label>`).join('');
+  $('#rateFields').querySelectorAll('input').forEach(i => i.oninput = () => { const v = parseFloat(i.value); if (!isNaN(v)) { setP(i.dataset.pk, v); recompute(); } });
+
+  $('#matTable').innerHTML = `<thead><tr><th>Malzeme</th><th>Yoğunluk</th><th>TL/kg</th><th>Talaş</th><th>Çekme %</th></tr></thead><tbody>` +
+    prof.materials.map((m, i) => `<tr><td>${esc(m.name)}</td><td><input data-mi="${i}" data-mk="rho" value="${m.rho}" inputmode="decimal"></td><td><input data-mi="${i}" data-mk="price" value="${m.price}" inputmode="decimal"></td><td><input data-mi="${i}" data-mk="mrr" value="${m.mrr}" inputmode="decimal"></td><td>${m.dokum ? `<input data-mi="${i}" data-mk="cekme" value="${m.cekme}" inputmode="decimal">` : ''}</td></tr>`).join('') + '</tbody>';
+  $('#matTable').querySelectorAll('input').forEach(i => i.oninput = () => { const v = parseFloat(i.value.replace(',', '.')); if (!isNaN(v)) { prof.materials[+i.dataset.mi][i.dataset.mk] = v; recompute(); } });
+
+  const MF = [['verim', 'Döküm verimi', '%'], ['pay', 'İşleme payı', 'mm'], ['red', 'Hurda / red', '%'], ['fire', 'Ergitme firesi', '%'], ['ergitme', 'Ergitme', 'TL/kg dökülen'], ['kalip', 'Kalıplama + maça', 'TL/adet'], ['temiz', 'Temizleme', 'TL/kg'], ['model', 'Model / kalıp', 'TL (parti)']];
+  $('#methodBox').innerHTML = prof.methods.map((m, i) => `<details><summary><label class="chk" style="display:inline-flex" onclick="event.stopPropagation()"><input type="checkbox" data-on="${i}" ${m.on ? 'checked' : ''}> ${esc(m.name)}</label></summary>
+    <div class="grid" style="margin-top:8px">${MF.map(([k, l, u]) => `<label class="f"><span>${l}</span><div class="in"><input type="number" inputmode="decimal" data-di="${i}" data-dk="${k}" value="${m[k]}"><em>${u}</em></div></label>`).join('')}</div></details>`).join('');
+  $('#methodBox').querySelectorAll('[data-on]').forEach(c => c.onchange = () => { prof.methods[+c.dataset.on].on = c.checked; if (state.proc === 'dokum') { renderProcFields(); recompute(); } });
+  $('#methodBox').querySelectorAll('[data-dk]').forEach(i => i.oninput = () => { const v = parseFloat(i.value); if (!isNaN(v)) { prof.methods[+i.dataset.di][i.dataset.dk] = v; recompute(); } });
+  document.querySelectorAll('#themeSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.t === (prof.theme || 'auto')));
+}
+['firma', 'tel', 'mail', 'adres'].forEach(k => $('#p' + k[0].toUpperCase() + k.slice(1)).oninput = e => prof[k] = e.target.value);
+$('#pLogo').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const img = new Image(), rd = new FileReader();
+  rd.onload = () => { img.onload = () => {
+    const s = Math.min(1, 320 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+    c.width = img.width * s; c.height = img.height * s; c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    prof.logo = c.toDataURL('image/png'); renderSettings();
+  }; img.src = rd.result; };
+  rd.readAsDataURL(f); e.target.value = '';
+};
+$('#pLogoDel').onclick = () => { prof.logo = ''; renderSettings(); };
+$('#pSave').onclick = () => { prof.saved = true; toast(store.set('profile', prof) ? 'Ayarlar kaydedildi' : 'Kaydedilemedi'); renderSettings(); recompute(); };
+$('#pReset').onclick = async () => {
+  if (!(await ask('Malzeme fiyatları, oranlar ve döküm yöntemleri varsayılana dönsün mü? Firma bilgileriniz korunur.'))) return;
+  const keep = { firma: prof.firma, tel: prof.tel, mail: prof.mail, adres: prof.adres, logo: prof.logo, theme: prof.theme };
+  prof = Object.assign(clone(DEF_PROF), keep); store.set('profile', prof);
+  renderSettings(); renderMatSel(); renderProcFields(); recompute(); toast('Varsayılanlar yüklendi');
+};
+document.querySelectorAll('#themeSeg button').forEach(b => b.onclick = () => { prof.theme = b.dataset.t; applyTheme(); store.set('profile', prof); renderSettings(); });
+function applyTheme() { if (prof.theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = prof.theme; }
+
+/* ---------- Başlat ---------- */
+applyTheme();
+renderSettings();
+setProc('sac');
+})();
+
+</script>
+</body>
+</html>
