@@ -139,6 +139,10 @@ th{font-weight:600;font-size:.88rem;color:var(--muted)}
 .qstep{display:grid;grid-template-columns:2.2em 1fr 1fr 2.6em;gap:8px;align-items:end}
 .qstep b{font-family:var(--cond);font-size:1.1rem;padding-bottom:10px}
 .qstep .btn{padding:9px 0}
+.help{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--tape);border-radius:var(--r-s);padding:10px 14px;margin-top:16px}
+.help summary{font-weight:600;cursor:pointer}
+.help ol{margin:10px 0 8px;padding-left:20px;display:grid;gap:6px}
+.help p{font-size:.92rem;color:var(--muted)}
 .matTable input{width:100%;min-width:60px;border:1px solid var(--line);border-radius:4px;background:var(--paper);padding:5px 6px;text-align:right}
 .matTable td:first-child{min-width:130px}
 details{border-top:1px solid var(--line);padding:10px 0}
@@ -165,6 +169,18 @@ details summary{cursor:pointer;font-weight:600}
 <main>
 <!-- ================= HESAP ================= -->
 <section class="view on" id="v-hesap">
+  <details class="help" id="helpBox">
+    <summary>Nasıl kullanılır?</summary>
+    <ol>
+      <li><b>Parçayı tanımlayın.</b> Çizim dosyası (DXF veya SVG) yükleyin ya da Hızlı parça ile ölçüleri girin.</li>
+      <li><b>İşlemi seçin.</b> Sac/lazer, torna, freze veya döküm. Kalınlık ya da eksen gibi bilgileri tamamlayın; 3B görünüm kendiliğinden oluşur.</li>
+      <li><b>Malzemeyi ve adetleri seçin.</b> Ağırlık, hammadde ve birim fiyat anında hesaplanır.</li>
+      <li><b>Teklif hazırla</b> ile müşteriye gidecek belgeyi oluşturun; PDF kaydedin veya WhatsApp'tan gönderin.</li>
+    </ol>
+    <p>İlk kullanımda <b>Ayarlar</b>'dan firma bilgilerinizi, malzeme fiyatlarınızı ve saat ücretlerinizi girip kaydedin. Hazır değerler piyasa ortalamasıdır, sizin maliyetinizi yansıtmaz.</p>
+    <p>DWG dosyasını AutoCAD'de "Farklı Kaydet → DXF" ile kaydedin. Bloklu çizimlerde önce PATLAT komutunu kullanın. Ölçü, eksen ve yazı katmanları otomatik kapatılır.</p>
+    <p>Telefonda ana ekrana eklemek için tarayıcı menüsünden "Ana ekrana ekle"yi seçin. Kayıtlarınız bu cihazda tutulur.</p>
+  </details>
   <h2>Parça</h2>
   <div class="seg two" id="srcSeg" role="group" aria-label="Parça kaynağı">
     <button data-s="file" aria-pressed="true">Çizim dosyası</button>
@@ -260,7 +276,7 @@ details summary{cursor:pointer;font-weight:600}
 <!-- ================= AYARLAR ================= -->
 <section class="view" id="v-ayar">
   <h2>Atölye</h2>
-  <p class="muted" id="profWarn">Fiyatlar şu an örnek değerlerle geliyor. Kendi rakamlarınızı girip kaydedin.</p>
+  <p class="muted" id="profWarn">Malzeme fiyatları Ekim 2026 piyasa ortalamalarıyla (KDV hariç) geliyor; saat ücretleri ve döküm oranları genel başlangıç değerleridir. Kendi rakamlarınızı girip kaydedin.</p>
   <div class="grid">
     <label class="f"><span>Firma adı</span><input id="pFirma" class="full"></label>
     <label class="f"><span>Telefon</span><input id="pTel" class="full" inputmode="tel"></label>
@@ -277,7 +293,7 @@ details summary{cursor:pointer;font-weight:600}
   <div class="grid" id="rateFields"></div>
 
   <h3>Malzemeler</h3>
-  <p class="note">Yoğunluk g/cm³, fiyat TL/kg. Talaş kaldırma, tornada dakikada kaldırılan ortalama talaş hacmidir.</p>
+  <p class="note">Yoğunluk g/cm³, fiyat TL/kg (KDV hariç). Varsayılan fiyatlar Ekim 2026 toptan liste ortalamalarıdır; döküm alaşımlarında şarj malzemesi (hurda, pik, külçe) fiyatı esas alınmıştır. Piyasa haftalık değişir, tedarikçi fiyatınızı girin. Talaş kaldırma, dakikada kaldırılan ortalama talaş hacmidir.</p>
   <div class="tw"><table class="matTable" id="matTable"></table></div>
 
   <h3>Döküm yöntemleri</h3>
@@ -304,7 +320,7 @@ details summary{cursor:pointer;font-weight:600}
   <details><summary>Gizlilik</summary>
     <p>Çizimleriniz, atölye bilgileriniz ve teklifleriniz yalnızca bu cihazdaki tarayıcı hafızasında saklanır. Hiçbir sunucuya gönderilmez, üçüncü kişilerle paylaşılmaz. Tarayıcı verilerini sildiğinizde kayıtlar da silinir.</p>
   </details>
-  <p class="note">Tornaly sürüm 1.1</p>
+  <p class="note">Tornaly sürüm 1.2</p>
 </section>
 </main>
 
@@ -731,23 +747,23 @@ const PLAN = { pro: true };
 
 /* ---------- Varsayılanlar (örnek değerler) ---------- */
 const DEF_MATS = [
-  { id: 'st37', name: 'St37 / S235 çelik', rho: 7.85, price: 40, mrr: 15 },
-  { id: 'c45', name: 'C45 imalat çeliği', rho: 7.85, price: 45, mrr: 12 },
+  { id: 'st37', name: 'St37 / S235 çelik', rho: 7.85, price: 36, mrr: 15 },
+  { id: 'c45', name: 'C45 imalat çeliği', rho: 7.85, price: 42, mrr: 12 },
   { id: 'ss304', name: '304 paslanmaz', rho: 7.93, price: 160, mrr: 8 },
-  { id: 'ss316', name: '316 paslanmaz', rho: 7.98, price: 200, mrr: 7 },
-  { id: 'al6061', name: 'Alüminyum 6061', rho: 2.70, price: 220, mrr: 40 },
-  { id: 'al7075', name: 'Alüminyum 7075', rho: 2.81, price: 350, mrr: 35 },
-  { id: 'brass', name: 'Pirinç', rho: 8.50, price: 400, mrr: 30 },
-  { id: 'cu', name: 'Bakır', rho: 8.96, price: 500, mrr: 20 },
-  { id: 'pom', name: 'POM (Delrin)', rho: 1.41, price: 300, mrr: 50 },
-  { id: 'pa6', name: 'PA6 (naylon)', rho: 1.14, price: 250, mrr: 50 },
-  { id: 'gg25', name: 'Gri dökme demir GG25', rho: 7.20, price: 30, mrr: 20, dokum: true, cekme: 1.0 },
-  { id: 'ggg40', name: 'Sfero döküm GGG40', rho: 7.10, price: 35, mrr: 15, dokum: true, cekme: 0.8 },
-  { id: 'gs', name: 'Döküm çeliği', rho: 7.85, price: 45, mrr: 12, dokum: true, cekme: 2.0 },
-  { id: 'alsi', name: 'Alüminyum döküm (AlSi)', rho: 2.68, price: 150, mrr: 40, dokum: true, cekme: 1.2 },
-  { id: 'zamak', name: 'Zamak', rho: 6.70, price: 200, mrr: 30, dokum: true, cekme: 0.7 },
-  { id: 'cusn', name: 'Bronz döküm', rho: 8.80, price: 450, mrr: 20, dokum: true, cekme: 1.5 },
-  { id: 'cuzn', name: 'Pirinç döküm', rho: 8.50, price: 400, mrr: 30, dokum: true, cekme: 1.5 },
+  { id: 'ss316', name: '316 paslanmaz', rho: 7.98, price: 250, mrr: 7 },
+  { id: 'al6061', name: 'Alüminyum 6061', rho: 2.70, price: 330, mrr: 40 },
+  { id: 'al7075', name: 'Alüminyum 7075', rho: 2.81, price: 480, mrr: 35 },
+  { id: 'brass', name: 'Pirinç', rho: 8.50, price: 700, mrr: 30 },
+  { id: 'cu', name: 'Bakır', rho: 8.96, price: 800, mrr: 20 },
+  { id: 'pom', name: 'POM (Delrin)', rho: 1.41, price: 245, mrr: 50 },
+  { id: 'pa6', name: 'PA6 (naylon)', rho: 1.14, price: 230, mrr: 50 },
+  { id: 'gg25', name: 'Gri dökme demir GG25', rho: 7.20, price: 22, mrr: 20, dokum: true, cekme: 1.0 },
+  { id: 'ggg40', name: 'Sfero döküm GGG40', rho: 7.10, price: 26, mrr: 15, dokum: true, cekme: 0.8 },
+  { id: 'gs', name: 'Döküm çeliği', rho: 7.85, price: 25, mrr: 12, dokum: true, cekme: 2.0 },
+  { id: 'alsi', name: 'Alüminyum döküm (AlSi)', rho: 2.68, price: 200, mrr: 40, dokum: true, cekme: 1.2 },
+  { id: 'zamak', name: 'Zamak', rho: 6.70, price: 160, mrr: 30, dokum: true, cekme: 0.7 },
+  { id: 'cusn', name: 'Bronz döküm', rho: 8.80, price: 780, mrr: 20, dokum: true, cekme: 1.5 },
+  { id: 'cuzn', name: 'Pirinç döküm', rho: 8.50, price: 450, mrr: 30, dokum: true, cekme: 1.5 },
 ];
 const DEF_METHODS = [
   { id: 'yasEl', name: 'Yaş kum (elle kalıplama)', verim: 60, pay: 3, red: 5, kalip: 80, model: 15000 },
@@ -761,6 +777,7 @@ const DEF_METHODS = [
   { id: 'santrifuj', name: 'Santrifüj', verim: 80, pay: 3, red: 3, kalip: 30, model: 40000 },
   { id: 'kopuk', name: 'Kayıp köpük', verim: 75, pay: 2, red: 4, kalip: 60, model: 20000 },
 ].map(m => ({ on: true, ergitme: 10, temiz: 5, fire: 3, ...m }));
+const PRICE_DATE = 'Ekim 2026';
 const DEF_PROF = {
   firma: '', tel: '', mail: '', adres: '', logo: '',
   rates: { lazer: 3000, torna: 1200, freze: 1500, isleme: 1200 },
@@ -782,7 +799,7 @@ const store = {
 const clone = o => JSON.parse(JSON.stringify(o));
 let prof = Object.assign(clone(DEF_PROF), store.get('profile', {}));
 const mergeById = (defs, saved) => { const m = new Map((saved || []).map(x => [x.id, x])); return defs.map(d => ({ ...d, ...(m.get(d.id) || {}) })); };
-prof.materials = mergeById(DEF_MATS, prof.materials);
+prof.materials = prof.saved ? mergeById(DEF_MATS, prof.materials) : clone(DEF_MATS);
 prof.methods = mergeById(DEF_METHODS, prof.methods);
 prof.rates = { ...DEF_PROF.rates, ...prof.rates };
 
@@ -1220,7 +1237,7 @@ function recompute() {
     </tbody></table></div>
     ${res.info.length ? `<h3>Teknik bilgi</h3><div class="tw"><table><tbody>${res.info.map(([a, b]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>`).join('')}</tbody></table></div>` : ''}
     ${state.proc === 'dokum' ? '<p class="note">Besleyici önerisi, parça modülünün 1,2 katı modüllü silindir besleyici varsayımıyla kaba bir başlangıç değeridir; yolluk tasarımının yerini tutmaz.</p>' : ''}
-    ${!prof.saved ? '<p class="note">Fiyatlar Ayarlar\'daki örnek değerlerle hesaplandı. Kendi malzeme ve saat ücretlerinizi girin.</p>' : ''}
+    ${!prof.saved ? '<p class="note">Fiyatlar Ekim 2026 piyasa ortalamalarıyla hesaplandı. Kendi malzeme fiyatlarınızı ve saat ücretlerinizi Ayarlar\'dan girin.</p>' : ''}
     <div class="row" style="margin-top:14px"><button class="btn tape" id="toQuote">Teklif hazırla</button></div>`;
   $('#toQuote').onclick = () => showView('teklif');
 }
