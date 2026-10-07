@@ -1494,5 +1494,10 @@ setProc('sac');
 })();
 
 </script>
+<script>
+if ('serviceWorker' in navigator) {
+  try { if (window.self === window.top) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {})); } catch (e) {}
+}
+</script>
 </body>
 </html>
