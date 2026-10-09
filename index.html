@@ -172,6 +172,11 @@ th{font-weight:600;font-size:.88rem;color:var(--muted)}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .chips small{width:100%;color:var(--muted)}
 .chips button{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:5px 10px;font:inherit;font-size:.9rem;font-variant-numeric:tabular-nums;cursor:pointer}
+.chips button.lowc,.oslots button.lowc{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,var(--paper))}
+.oslots{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:6px;margin:6px 0}
+.oslots button{border:1px solid var(--line);background:var(--paper);border-radius:var(--r-s);padding:6px 8px;font:inherit;font-weight:600;font-variant-numeric:tabular-nums;text-align:left;cursor:pointer}
+.oslots button small{display:block;font-weight:400;color:var(--muted);font-size:.78rem}
+.oslots button[aria-pressed="true"]{border-color:var(--steel);box-shadow:0 0 0 2px var(--steel) inset}
 .matTable input{width:100%;min-width:60px;border:1px solid var(--line);border-radius:4px;background:var(--paper);padding:5px 6px;text-align:right}
 .matTable td:first-child{min-width:130px}
 details{border-top:1px solid var(--line);padding:10px 0}
@@ -207,7 +212,7 @@ details summary{cursor:pointer;font-weight:600}
       <li><b>Teklif hazırla</b> ile müşteriye gidecek belgeyi oluşturun; PDF kaydedin veya WhatsApp'tan gönderin.</li>
     </ol>
     <p>İlk kullanımda <b>Ayarlar</b>'dan firma bilgilerinizi, malzeme fiyatlarınızı ve saat ücretlerinizi girip kaydedin. Hazır değerler piyasa ortalamasıdır, sizin maliyetinizi yansıtmaz.</p>
-    <p>Müşteriden gelen PDF çizimi <b>Çizim seç</b> ile açın. CAD programından kaydedilmiş PDF'lerde parça hattı, ölçek ve torna/prizmatik ayrımı otomatik bulunur; sonucu çizimle karşılaştırın. Fotoğraf ve taranmış çizimler ekranda açılır.</p>
+    <p>Müşteriden gelen PDF çizimi <b>Çizim seç</b> ile açın. CAD programından kaydedilmiş PDF'lerde parça hattı, ölçek ve torna/prizmatik ayrımı otomatik bulunur; sonucu çizimle karşılaştırın. Fotoğraf ve taranmış çizimlerde rakamlar telefonda okunur; dış çap, boy (plakada genişlik) kendiliğinden dolar. Yanlış olan kutuya dokunup okunan rakamlardan doğrusunu seçin.</p>
     <p>DWG dosyasını AutoCAD'de "Farklı Kaydet → DXF" ile kaydedin. Bloklu çizimlerde önce PATLAT komutunu kullanın. Ölçü, eksen ve yazı katmanları otomatik kapatılır.</p>
     <p>Kayıtlarınız yalnızca bu cihazda tutulur; Ayarlar'dan yedek alabilirsiniz.</p>
   </details>
@@ -226,7 +231,7 @@ details summary{cursor:pointer;font-weight:600}
         <option value="mil">Kademeli mil</option>
       </select>
     </div>
-    <p class="note">DXF, SVG ve CAD programından kaydedilmiş PDF çizimler telefonda okunur; çiziminiz dışarı gönderilmez. Fotoğraf veya taranmış çizimler ekranda açılır, ölçüleri Hızlı parçaya girersiniz.</p>
+    <p class="note">DXF, SVG ve CAD programından kaydedilmiş PDF çizimler telefonda okunur; çiziminiz dışarı gönderilmez. Fotoğraf veya taranmış çizimlerdeki rakamlar da telefonda okunur ve Hızlı parçaya kendiliğinden yazılır.</p>
   </div>
   <div id="srcQuick" style="margin-top:12px" hidden>
     <div id="aiBox" class="aibox" hidden></div>
@@ -361,14 +366,14 @@ details summary{cursor:pointer;font-weight:600}
   </div>
 
   <h3>Hakkında</h3>
-  <p class="note" style="margin-top:0">Tornaly sürüm 1.4 · Geliştirici: Yurdagül Güler<br>
+  <p class="note" style="margin-top:0">Tornaly sürüm 1.5 · Geliştirici: Yurdagül Güler<br>
   Destek: <span style="user-select:all">yolhava.destek@gmail.com</span></p>
   <div class="row">
     <a class="btn ghost" href="gizlilik.html">Gizlilik politikası</a>
     <a class="btn ghost" href="kullanim-kosullari.html">Kullanım koşulları</a>
   </div>
   <details><summary>Açık kaynak lisansları</summary>
-    <p>three.js © 2010-2021 Three.js Authors, MIT lisansı. PDF.js © Mozilla Foundation, Apache 2.0 lisansı. Barlow ve Barlow Condensed yazı tipleri © The Barlow Project Authors, SIL Open Font License 1.1.</p>
+    <p>three.js © 2010-2021 Three.js Authors, MIT lisansı. PDF.js © Mozilla Foundation, Apache 2.0 lisansı. Tesseract OCR ve tesseract.js-core © ilgili yazarlar, Apache 2.0 lisansı. Barlow ve Barlow Condensed yazı tipleri © The Barlow Project Authors, SIL Open Font License 1.1.</p>
   </details>
 </section>
 </main>
@@ -1181,7 +1186,7 @@ function showAIBox(v, g, mk) {
     setSrc('file', true); await sendDrawing(lastDrawing.src);
   };
 }
-function hideAIBox() { $('#aiBox').hidden = true; $('#quickNote').hidden = false; }
+function hideAIBox() { ocr = null; $('#aiBox').hidden = true; $('#quickNote').hidden = false; }
 
 function openView() {
   if (!lastDrawing) return;
@@ -1367,19 +1372,160 @@ function showScaleChips(nums) {
   box.querySelectorAll('button').forEach(b => b.onclick = () => { $('#scaleW').value = b.dataset.n; $('#scaleW').dispatchEvent(new Event('change')); });
 }
 
-/* ---------- Fotoğraf / taranmış çizim: ekranda göster ---------- */
+/* ---------- Fotoğraf / taranmış çizim: göster ve ölçüleri oku ---------- */
 async function showImageRef(file, canvas, name, why) {
   try { if (!canvas) canvas = await imageToCanvas(file); } catch (err) { return failLoad(err.message); }
   lastDrawing = { name: name || (file ? file.name.replace(/\.[^.]+$/, '') : 'Çizim'), src: canvas.toDataURL('image/jpeg', 0.85) };
   state.pieces = null; $('#layerBox').hidden = true; $('#scaleBox').hidden = true;
   setSrc('quick');
-  $('#aiBox').innerHTML = `<img src="${lastDrawing.src}" alt="Müşteri çizimi" id="aiThumb">
-    <div><p><b>${esc(why || 'Bu bir fotoğraf; içinde çizgi verisi yok.')}</b> Çizimi büyütüp ölçüleri aşağıya girin.</p>
-    <p class="muted">Fotoğraf ve taramaların otomatik okunması üzerinde çalışıyoruz.</p>
-    <div class="row"><button class="btn" id="aiShow">Çizimi büyüt</button></div></div>`;
-  $('#aiBox').hidden = false; $('#quickNote').hidden = true;
-  $('#aiThumb').onclick = $('#aiShow').onclick = () => openView();
   setPartName(lastDrawing.name);
+  ocrStart(canvas);
+}
+
+/* ---------- OCR: fotoğraftaki ölçüleri telefonda oku (Tesseract, hiçbir yere gönderilmez) ---------- */
+let ocrW = null, ocrSeq = 0, ocr = null;
+const ocrWait = {};
+function ocrWorker() {
+  if (ocrW) return ocrW;
+  ocrW = new Worker('ocr-worker.js');
+  ocrW.onmessage = e => { const p = ocrWait[e.data.id]; if (!p) return; delete ocrWait[e.data.id]; e.data.error ? p.rej(new Error(e.data.error)) : p.res(e.data.tsv); };
+  ocrW.onerror = ev => { ev.preventDefault(); Object.keys(ocrWait).forEach(k => { ocrWait[k].rej(new Error('OCR motoru yüklenemedi; internet bağlantısını kontrol edin.')); delete ocrWait[k]; }); ocrW = null; };
+  return ocrW;
+}
+const ocrRun = png => new Promise((res, rej) => { const id = ++ocrSeq; ocrWait[id] = { res, rej }; ocrWorker().postMessage({ id, png }, [png]); });
+
+// Gri tona çevir, büyüt, yerel eşikle siyah-beyaz yap (gölgeli fotoğraflar için)
+function ocrPrep(src) {
+  const k = Math.max(0.5, Math.min(2.5, 3200 / Math.max(src.width, src.height)));
+  const w = Math.round(src.width * k), h = Math.round(src.height * k);
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d', { willReadFrequently: true });
+  x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.imageSmoothingQuality = 'high'; x.drawImage(src, 0, 0, w, h);
+  const src0 = x.getImageData(0, 0, w, h).data, W1 = w + 1;
+  const g = new Uint8Array(w * h), I = new Uint32Array(W1 * (h + 1));
+  for (let i = 0; i < w * h; i++) g[i] = (77 * src0[4 * i] + 150 * src0[4 * i + 1] + 29 * src0[4 * i + 2]) >> 8;
+  for (let y = 0; y < h; y++) { let s = 0; for (let q = 0; q < w; q++) { s += g[y * w + q]; I[(y + 1) * W1 + q + 1] = I[y * W1 + q + 1] + s; } }
+  // İki eşik: biri ince rakamları, biri koyu/gölgeli rakamları yakalar; sonuçlar birleştirilir
+  return [12, 18].map(C => {
+  const R = 15, oc = document.createElement('canvas'); oc.width = w; oc.height = h;
+  const ox = oc.getContext('2d'), om = ox.createImageData(w, h), d = om.data;
+  for (let y = 0; y < h; y++) {
+    const y0 = Math.max(0, y - R), y1 = Math.min(h, y + R + 1);
+    for (let q = 0; q < w; q++) {
+      const x0 = Math.max(0, q - R), x1 = Math.min(w, q + R + 1);
+      const s = I[y1 * W1 + x1] - I[y0 * W1 + x1] - I[y1 * W1 + x0] + I[y0 * W1 + x0];
+      const v = g[y * w + q] * (y1 - y0) * (x1 - x0) < (s - C * (y1 - y0) * (x1 - x0)) ? 0 : 255, o = 4 * (y * w + q);
+      d[o] = d[o + 1] = d[o + 2] = v; d[o + 3] = 255;
+    }
+  }
+  ox.putImageData(om, 0, 0);
+  return oc;
+  });
+}
+function ocrRotate(c, deg) {
+  if (!deg) return c;
+  const r = document.createElement('canvas'), q = deg % 180 !== 0;
+  r.width = q ? c.height : c.width; r.height = q ? c.width : c.height;
+  const x = r.getContext('2d'); x.translate(r.width / 2, r.height / 2); x.rotate(deg * Math.PI / 180); x.drawImage(c, -c.width / 2, -c.height / 2);
+  return r;
+}
+const canvasPng = c => new Promise(res => c.toBlob(b => b.arrayBuffer().then(res), 'image/png'));
+
+function ocrNums(tsv, into) {
+  for (const line of tsv.split('\n')) {
+    const f = line.split('\t');
+    if (f.length < 12 || f[0] !== '5') continue;
+    const conf = +f[10], t = f[11].trim().replace(',', '.');
+    if (!/^\d{1,4}(\.\d{1,3})?$/.test(t) || conf < 30) continue;
+    const v = parseFloat(t), dec = t.includes('.');
+    if (v < 1 || v > 5000 || (!dec && (t.length < 2 || t.length > 3 || conf < 85))) continue;
+    const key = v.toFixed(3), o = into.get(key);
+    if (o) { o.n++; o.conf = Math.max(o.conf, conf); } else into.set(key, { v, n: 1, conf, dec });
+  }
+}
+
+async function ocrStart(canvas) {
+  const run = ocr = { vals: [], busy: true };
+  ocrPanel();
+  try {
+    const bins = ocrPrep(canvas), found = new Map(), rots = [0, 180, 90, 270], jobs = [];
+    bins.forEach(b => rots.forEach(r => jobs.push([b, r])));
+    run.total = jobs.length;
+    for (let i = 0; i < jobs.length; i++) {
+      if (ocr !== run) return;
+      run.step = i + 1; ocrPanel();
+      ocrNums(await ocrRun(await canvasPng(ocrRotate(jobs[i][0], jobs[i][1]))), found);
+    }
+    if (ocr !== run) return;
+    run.vals = [...found.values()].sort((a, b) => b.v - a.v);
+    run.busy = false;
+    if (!run.vals.length) { run.err = 'Çizimde okunabilir rakam bulunamadı. Daha yakından, düz ve aydınlık bir fotoğraf deneyin ya da ölçüleri aşağıya girin.'; return ocrPanel(); }
+    // Dönel parça tahmini: işlem torna ise ya da birbirine yakın çok sayıda çap varsa (kademeli mil/burç)
+    const dv = ocrClean(run.vals), top = dv.find(n => n < (dv[0] || 0) * 0.97) || 0;
+    run.mode = isRevMode() || dv.filter(n => n >= top * 0.75 && n <= top).length >= 4 ? 'rev' : 'plate';
+    ocrGuess(); ocrApply(); ocrPanel();
+  } catch (err) { if (ocr === run) { run.busy = false; run.err = err.message; ocrPanel(); } }
+}
+// Tahmin için temiz liste: ondalıklı çizimde yalnız ondalıklılar; birleşik okunmuş aşırı değerler atılır
+function ocrClean(vals) {
+  const decs = vals.filter(o => o.dec), pool = decs.length >= 3 ? decs : vals;
+  const v = pool.map(o => o.v).filter(n => n >= 3).sort((a, b) => b - a);
+  const med = v.length ? v[Math.floor(v.length / 2)] : 0;
+  return v.filter(n => n <= med * 4);
+}
+function ocrGuess() {
+  const v = ocrClean(ocr.vals), big = v[0] || 0, next = v.find(n => n < big * 0.97) || 0;
+  ocr.slots = ocr.mode === 'rev' ? { D: next, Di: 0, L: big } : { W: next, H: big };
+  ocr.active = ocr.mode === 'rev' ? 'Di' : 'W';
+}
+function ocrApply() {
+  const s = ocr.slots;
+  let proc = state.proc;
+  if (ocr.mode === 'rev') {
+    if (!(s.D > 0 && s.L > 0)) return;
+    if (proc === 'dokum') state.params.dokum.shape = 'rev'; else proc = 'torna';
+    state.quick.shape = 'mil';
+    state.quick.mil.steps = [{ d: s.D, di: s.Di > 0 && s.Di < s.D ? s.Di : 0, l: s.L }];
+    state.params.torna.stockBore = s.Di > 20 && s.Di < s.D ? Math.floor((s.Di - 6) / 5) * 5 : 0;
+  } else {
+    if (!(s.W > 0 && s.H > 0)) return;
+    if (proc === 'torna') proc = 'sac';
+    if (proc === 'dokum') state.params.dokum.shape = 'ext';
+    state.quick.shape = 'plaka';
+    Object.assign(state.quick.plaka, { w: s.W, h: s.H, r: 0, midD: 0, holeD: 0, holeN: 0 });
+  }
+  if (proc !== state.proc) setProc(proc, true);
+  state.src = 'quick'; renderQuick();
+}
+const OCR_SLOTS = { rev: [['D', 'Dış Ø'], ['Di', 'İç Ø'], ['L', 'Boy']], plate: [['W', 'Genişlik'], ['H', 'Boy']] };
+function ocrPanel() {
+  if (!ocr || !lastDrawing) return;
+  const box = $('#aiBox'), th = `<img src="${lastDrawing.src}" alt="Müşteri çizimi" id="aiThumb">`;
+  const tail = `<div class="row"><button class="btn" id="aiShow">Çizimi büyüt</button>${ocr.mode === 'rev' && !ocr.busy && !ocr.err ? '<button class="btn ghost" id="ocrSwap">Dış Ø ↔ Boy</button>' : ''}</div>`;
+  let h;
+  if (ocr.busy) h = `<p><span class="busy" aria-hidden="true"></span><b>Ölçüler okunuyor… (${ocr.step || 1}/${ocr.total || 8})</b></p><p class="muted">Çizim telefonda okunur, hiçbir yere gönderilmez. İlk kullanımda okuma motoru iner (~7 MB), sonra internetsiz de çalışır.</p>`;
+  else if (ocr.err) h = `<p><b class="warn">${esc(ocr.err)}</b></p>`;
+  else {
+    const S = ocr.slots, lab = OCR_SLOTS[ocr.mode], low = new Set(ocr.vals.filter(o => o.conf < 60 && o.n < 2).map(o => o.v));
+    h = `<p><b>Ölçüler çizimden okundu.</b> Kontrol edin: yanlış olan kutuya dokunun, sonra aşağıdan doğru rakamı seçin.</p>
+      <div class="seg two" id="ocrMode" style="margin:6px 0"><button data-m="rev" aria-pressed="${ocr.mode === 'rev'}">Dönel parça</button><button data-m="plate" aria-pressed="${ocr.mode === 'plate'}">Plaka</button></div>
+      <div class="oslots">${lab.map(([k, t]) => `<button type="button" data-slot="${k}" aria-pressed="${ocr.active === k}"${low.has(S[k]) ? ' class="lowc"' : ''}><small>${t}</small>${S[k] > 0 ? fmt(S[k], S[k] % 1 ? 2 : 0) : (k === 'Di' ? 'dolu' : '—')}</button>`).join('')}</div>
+      <div class="chips" id="ocrChips"><small>Okunan rakamlar → <b>${lab.find(l => l[0] === ocr.active)[1]}</b> için dokunun${low.size ? ' · sarılar belirsiz' : ''}</small>${ocr.active === 'Di' ? '<button type="button" data-v="0">Dolu (iç çap yok)</button>' : ''}${ocr.vals.filter(o => o.v <= (ocrClean(ocr.vals)[0] || Infinity) * 1.05).map(o => `<button type="button" data-v="${o.v}"${low.has(o.v) ? ' class="lowc"' : ''}>${fmt(o.v, o.v % 1 ? (String(o.v).split('.')[1].length > 2 ? 3 : 2) : 0)}</button>`).join('')}</div>
+      <p class="muted" style="margin-top:6px">Bunlar zarf ölçüleridir: hammadde ve teklif için yeterlidir. Okunmayan ölçüyü aşağıya elle de yazabilirsiniz.</p>`;
+  }
+  box.innerHTML = th + '<div>' + h + tail + '</div>';
+  box.hidden = false; $('#quickNote').hidden = true;
+  $('#aiThumb').onclick = $('#aiShow').onclick = () => openView();
+  if (ocr.busy || ocr.err) return;
+  box.querySelectorAll('[data-slot]').forEach(b => b.onclick = () => { ocr.active = b.dataset.slot; ocrPanel(); });
+  box.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { if (ocr.mode === b.dataset.m) return; ocr.mode = b.dataset.m; ocrGuess(); ocrApply(); ocrPanel(); });
+  box.querySelectorAll('#ocrChips [data-v]').forEach(b => b.onclick = () => {
+    const order = OCR_SLOTS[ocr.mode].map(l => l[0]);
+    ocr.slots[ocr.active] = +b.dataset.v;
+    ocr.active = order[(order.indexOf(ocr.active) + 1) % order.length];
+    ocrApply(); ocrPanel();
+  });
+  const sw = $('#ocrSwap'); if (sw) sw.onclick = () => { const s = ocr.slots; [s.D, s.L] = [s.L, s.D]; ocrApply(); ocrPanel(); };
 }
 
 /* ---------- Ölçek düzeltme ---------- */
