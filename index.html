@@ -144,7 +144,7 @@ th{font-weight:600;font-size:.88rem;color:var(--muted)}
 .hist li{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);padding:12px;margin:8px 0;display:flex;justify-content:space-between;gap:10px;align-items:center}
 .hist b{font-family:var(--cond);font-size:1.15rem}
 .qsteps{display:grid;gap:8px;margin-top:8px}
-.qstep{display:grid;grid-template-columns:1.6em minmax(0,1fr) minmax(0,1fr) 2.6em;gap:6px;align-items:end}
+.qstep{display:grid;grid-template-columns:1.3em repeat(3,minmax(0,1fr)) 2.4em;gap:6px;align-items:end}
 .qstep>*{min-width:0}
 .qstep .in em{padding-right:6px}
 .qstep b{font-family:var(--cond);font-size:1.1rem;padding-bottom:10px}
@@ -153,6 +153,25 @@ th{font-weight:600;font-size:.88rem;color:var(--muted)}
 .help summary{font-weight:600;cursor:pointer}
 .help ol{margin:10px 0 8px;padding-left:20px;display:grid;gap:6px}
 .help p{font-size:.92rem;color:var(--muted)}
+.qhead small{color:var(--muted);font-size:.82rem;padding-left:2px}
+.qstep .in input{padding:9px 6px}
+.aibox{border:1px solid var(--line);border-left:4px solid var(--steel);border-radius:var(--r-s);background:var(--surface);padding:12px;margin-bottom:12px;display:grid;grid-template-columns:84px minmax(0,1fr);gap:12px;align-items:start}
+.aibox img{width:84px;height:84px;object-fit:cover;border-radius:4px;border:1px solid var(--line);background:#fff;cursor:zoom-in}
+.aibox p{margin:0 0 6px;font-size:.92rem}
+.aibox .warn{color:var(--warn)}
+.aibox .row{gap:6px;margin-top:4px}
+.aibox .btn{padding:7px 10px;font-size:.9rem}
+.viewbg{position:fixed;inset:0;z-index:11;background:var(--paper);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.viewbar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.viewbar .btn{padding:8px 12px}
+.viewscroll{flex:1;overflow:auto;background:#fff;touch-action:pan-x pan-y pinch-zoom}
+.viewscroll img{display:block;transform-origin:top left}
+.busy{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--steel);border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.busy{animation:none}}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chips small{width:100%;color:var(--muted)}
+.chips button{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:5px 10px;font:inherit;font-size:.9rem;font-variant-numeric:tabular-nums;cursor:pointer}
 .matTable input{width:100%;min-width:60px;border:1px solid var(--line);border-radius:4px;background:var(--paper);padding:5px 6px;text-align:right}
 .matTable td:first-child{min-width:130px}
 details{border-top:1px solid var(--line);padding:10px 0}
@@ -188,6 +207,7 @@ details summary{cursor:pointer;font-weight:600}
       <li><b>Teklif hazırla</b> ile müşteriye gidecek belgeyi oluşturun; PDF kaydedin veya WhatsApp'tan gönderin.</li>
     </ol>
     <p>İlk kullanımda <b>Ayarlar</b>'dan firma bilgilerinizi, malzeme fiyatlarınızı ve saat ücretlerinizi girip kaydedin. Hazır değerler piyasa ortalamasıdır, sizin maliyetinizi yansıtmaz.</p>
+    <p>Müşteriden gelen PDF çizimi <b>Çizim seç</b> ile açın. CAD programından kaydedilmiş PDF'lerde parça hattı, ölçek ve torna/prizmatik ayrımı otomatik bulunur; sonucu çizimle karşılaştırın. Fotoğraf ve taranmış çizimler ekranda açılır.</p>
     <p>DWG dosyasını AutoCAD'de "Farklı Kaydet → DXF" ile kaydedin. Bloklu çizimlerde önce PATLAT komutunu kullanın. Ölçü, eksen ve yazı katmanları otomatik kapatılır.</p>
     <p>Kayıtlarınız yalnızca bu cihazda tutulur; Ayarlar'dan yedek alabilirsiniz.</p>
   </details>
@@ -198,7 +218,7 @@ details summary{cursor:pointer;font-weight:600}
   </div>
   <div id="srcFile" style="margin-top:12px">
     <div class="row">
-      <label class="btn main file">Çizim seç (DXF, SVG)<input type="file" id="dxfIn"></label>
+      <label class="btn main file">Çizim seç<input type="file" id="dxfIn"></label>
       <select id="sampleSel" class="btn ghost" aria-label="Örnek çizim">
         <option value="">Örnek çizim aç</option>
         <option value="braket">Sac braket</option>
@@ -206,16 +226,18 @@ details summary{cursor:pointer;font-weight:600}
         <option value="mil">Kademeli mil</option>
       </select>
     </div>
-    <p class="note">AutoCAD'den Farklı Kaydet ile DXF, Inkscape, LibreCAD veya CAM programlarından SVG olarak kaydedin. Bloklar varsa önce PATLAT (EXPLODE) komutunu kullanın. Çiziminiz bu cihazdan dışarı gönderilmez.</p>
+    <p class="note">DXF, SVG ve CAD programından kaydedilmiş PDF çizimler telefonda okunur; çiziminiz dışarı gönderilmez. Fotoğraf veya taranmış çizimler ekranda açılır, ölçüleri Hızlı parçaya girersiniz.</p>
   </div>
   <div id="srcQuick" style="margin-top:12px" hidden>
-    <p class="note" style="margin-top:0">Çizim olmadan ölçüleri girin; yaklaşık teklif için yeterlidir.</p>
+    <div id="aiBox" class="aibox" hidden></div>
+    <p class="note" style="margin-top:0" id="quickNote">Çizim olmadan ölçüleri girin; yaklaşık teklif için yeterlidir.</p>
     <div id="quickForm"></div>
   </div>
   <div id="fileInfo" class="msgs"></div>
   <div id="scaleBox" class="block" hidden>
     <label class="f"><span>Ölçü kontrolü: parçanın gerçek genişliği</span><div class="in"><input type="number" inputmode="decimal" id="scaleW"><em>mm</em></div></label>
     <small>Okunan genişlik yanlışsa (birim farkı gibi) doğrusunu yazın, çizim buna göre ölçeklenir.</small>
+    <div id="scaleChips" class="chips" hidden></div>
   </div>
   <div id="layerBox" class="block" hidden>
     <b>Katmanlar</b> <small>Ölçü, eksen ve yazı katmanlarını kapatın.</small>
@@ -339,14 +361,14 @@ details summary{cursor:pointer;font-weight:600}
   </div>
 
   <h3>Hakkında</h3>
-  <p class="note" style="margin-top:0">Tornaly sürüm 1.3 · Geliştirici: Yurdagül Güler<br>
+  <p class="note" style="margin-top:0">Tornaly sürüm 1.4 · Geliştirici: Yurdagül Güler<br>
   Destek: <span style="user-select:all">yolhava.destek@gmail.com</span></p>
   <div class="row">
     <a class="btn ghost" href="gizlilik.html">Gizlilik politikası</a>
     <a class="btn ghost" href="kullanim-kosullari.html">Kullanım koşulları</a>
   </div>
   <details><summary>Açık kaynak lisansları</summary>
-    <p>three.js © 2010-2021 Three.js Authors, MIT lisansı. Barlow ve Barlow Condensed yazı tipleri © The Barlow Project Authors, SIL Open Font License 1.1.</p>
+    <p>three.js © 2010-2021 Three.js Authors, MIT lisansı. PDF.js © Mozilla Foundation, Apache 2.0 lisansı. Barlow ve Barlow Condensed yazı tipleri © The Barlow Project Authors, SIL Open Font License 1.1.</p>
   </details>
 </section>
 </main>
@@ -358,6 +380,10 @@ details summary{cursor:pointer;font-weight:600}
   <button role="tab" data-v="ayar" aria-selected="false">Ayarlar</button>
 </div></nav>
 <div class="toast" id="toast" role="status"></div>
+<div class="viewbg" id="drawView" hidden>
+  <div class="viewbar"><b>Müşteri çizimi</b><span class="row" style="gap:6px;flex-wrap:nowrap"><button class="btn ghost" id="dvMinus" aria-label="Uzaklaştır">−</button><button class="btn ghost" id="dvPlus" aria-label="Yakınlaştır">+</button><button class="btn ghost" id="dvRot">Döndür</button><button class="btn main" id="dvClose">Kapat</button></span></div>
+  <div class="viewscroll" id="dvScroll"><img id="dvImg" alt="Müşteri çizimi"></div>
+</div>
 <div class="askbg" id="askBox" hidden><div class="ask" role="dialog" aria-modal="true" aria-labelledby="askMsg"><p id="askMsg"></p><div class="row" style="justify-content:flex-end"><button class="btn ghost" id="askNo">Vazgeç</button><button class="btn main" id="askYes">Evet</button></div></div></div>
 
 <script>
@@ -667,16 +693,19 @@ const Core = (() => {
 
   function costTorna(geo, mat, p, rate) {
     const partKg = kg(geo.V, mat.rho);
-    const D = nextBar(geo.maxD + p.diaAllow), L = geo.length + p.lenAllow;
-    const stockV = Math.PI * D * D / 4 * L, stockKg = kg(stockV, mat.rho);
+    const tube = (p.stockBore || 0) > 0, L = geo.length + p.lenAllow;
+    const D = tube ? Math.ceil((geo.maxD + p.diaAllow) / 5) * 5 : nextBar(geo.maxD + p.diaAllow);
+    const B = Math.max(0, Math.min(p.stockBore || 0, D - 2));
+    const stockV = Math.PI * (D * D - B * B) / 4 * L, stockKg = kg(stockV, mat.rho);
+    const stockName = B > 0 ? 'Boru Ø' + D + '/Ø' + fmt(B, 0) : 'Ø' + D;
     const chip = Math.max(0, stockV - geo.V) / 1000;
     const mMin = chip / p.mrr + p.finishMin;
     return {
       partKg, rawKg: stockKg,
-      lines: [['Hammadde Ø' + D + ' × ' + fmt(L, 0) + ' mm (' + fmt(stockKg, 2) + ' kg)', stockKg * mat.price],
+      lines: [['Hammadde ' + stockName + ' × ' + fmt(L, 0) + ' mm (' + fmt(stockKg, 2) + ' kg)', stockKg * mat.price],
               ['Talaşlı işleme (' + fmt(chip, 0) + ' cm³ talaş, ' + fmt(mMin, 1) + ' dk)', mMin / 60 * rate]],
       batch: [['Bağlama ve ayar (' + p.setupMin + ' dk)', p.setupMin / 60 * rate]],
-      info: [['Standart çubuk', 'Ø' + D + ' mm'], ['Kesim boyu', fmt(L, 0) + ' mm']]
+      info: [[B > 0 ? 'Hammadde borusu' : 'Standart çubuk', B > 0 ? 'Ø' + D + ' dış / Ø' + fmt(B, 0) + ' iç mm' : 'Ø' + D + ' mm'], ['Kesim boyu', fmt(L, 0) + ' mm']]
     };
   }
 
@@ -821,7 +850,7 @@ const DEF_PROF = {
 };
 const DEF_PARAMS = {
   sac: { t: 5, fire: 15, speed: 2000, pierceSec: 2, bends: 0, setupMin: 15 },
-  torna: { axis: 'orta', vert: 0, diaAllow: 3, lenAllow: 5, mrr: 15, finishMin: 5, setupMin: 20 },
+  torna: { axis: 'orta', vert: 0, diaAllow: 3, lenAllow: 5, stockBore: 0, mrr: 15, finishMin: 5, setupMin: 20 },
   freze: { t: 20, allow: 3, tAllow: 3, mrr: 9, finishMin: 10, setupMin: 30 },
   dokum: { shape: 'ext', t: 20, axis: 'orta', vert: 0, method: 'yasEl', machinedPct: 30, isil: 0, islemeMin: 0 },
 };
@@ -846,7 +875,7 @@ const state = {
     shape: 'plaka',
     plaka: { w: 200, h: 100, r: 5, holeD: 12, holeN: 4, midD: 0 },
     flans: { D: 200, d: 60, bcd: 160, boltD: 14, boltN: 6, t: 20 },
-    mil: { bore: 0, steps: [{ d: 50, l: 40 }, { d: 40, l: 80 }, { d: 30, l: 50 }] }
+    mil: { steps: [{ d: 50, di: 0, l: 40 }, { d: 40, di: 0, l: 80 }, { d: 30, di: 0, l: 50 }] }
   }
 };
 
@@ -866,8 +895,10 @@ function showView(v) {
 }
 
 /* ---------- DXF yükleme ---------- */
+const isDrawingImage = f => !/\.(dxf|svg|dwg|stl|step|stp|txt)$/i.test(f.name) && (/\.(pdf|jpe?g|png|webp|gif|bmp)$/i.test(f.name) || /^(image\/(jpe?g|png|webp|gif|bmp)|application\/pdf)/i.test(f.type || ''));
 $('#dxfIn').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
+  if (isDrawingImage(f)) { e.target.value = ''; return /pdf$/i.test(f.name) || f.type === 'application/pdf' ? loadPDF(f) : showImageRef(f); }
   const r = new FileReader();
   r.onload = () => loadFile(r.result, f.name);
   r.onerror = () => showMsgs([['err', 'Dosya okunamadı. Tekrar seçin.']]);
@@ -893,7 +924,7 @@ function loadFile(text, name) {
   if (low.endsWith('.stl') || low.endsWith('.step') || low.endsWith('.stp') || /^solid\s/.test(head) || head.startsWith('ISO-10303'))
     return failLoad('3B dosyalar (STL, STEP) bu sürümde okunmuyor. Parçanın 2B görünüşünü DXF veya SVG olarak kaydedin ya da Hızlı parça ile ölçüleri girin.');
   if (low.endsWith('.pdf') || head.startsWith('%PDF'))
-    return failLoad('PDF çizimler okunmuyor. Çizim programından DXF veya SVG olarak kaydedin.');
+    return failLoad('PDF dosyası okunamadı. Dosyayı tekrar seçin.');
   if (low.endsWith('.svg') || head.startsWith('<'))
     return loadSVG(text, name);
   loadDXF(text, name);
@@ -909,6 +940,7 @@ function loadSVG(text, name) {
   catch (err) { failLoad(err.message); }
 }
 function usePieces(d, name, notes) {
+  hideAIBox(); $('#scaleChips').hidden = true; state.textPts = null;
   state.pieces = d.pieces; state.fileName = name; state.skipped = d.skipped || {}; state.scale = 1; state.fileMsgs = notes || [];
   state.layerOn = {};
   d.layers.forEach(l => state.layerOn[l] = !/^(dim|ölçü|olcu|olçu|text|yaz|eksen|center|axis|hatch|tarama|defpoints)/i.test(l));
@@ -998,7 +1030,7 @@ function rebuildPart() {
     if (!all.length) throw new Error('Seçili katmanlarda çizim yok.');
     const bb = Core.bbox(all), tol = Math.max(0.05, Math.hypot(bb.w, bb.h) * 2e-5);
     const { loops, dropped } = Core.buildLoops(pcs, tol);
-    state.part = Core.analyze(loops);
+    state.part = Core.analyze(dropTextBoxes(loops, k));
     msgs.push(['ok', `${state.fileName}: ${state.part.holes.length} iç kontur (delik), dış ölçü ${fmt(state.part.bb.w, 1)} × ${fmt(state.part.bb.h, 1)} mm`]);
     if (dropped) msgs.push(['warn', `${dropped} açık çizgi yok sayıldı (eksen, ölçü çizgisi gibi). Parça hattında açık kalan yer varsa uçları birleştirin.`]);
     if (state.part.outside) msgs.push(['warn', `Dış hattın dışında ${state.part.outside} kontur daha var. Sadece en büyük parça hesaplandı; diğer görünüşleri katmandan kapatabilirsiniz.`]);
@@ -1016,6 +1048,339 @@ function rebuildPart() {
 }
 
 function showMsgs(m) { $('#fileInfo').innerHTML = m.map(([k, t]) => `<p class="${k === 'err' ? 'err' : ''}" ${k === 'ok' ? 'style="border-left-color:var(--steel)"' : ''}>${esc(t)}</p>`).join(''); }
+
+
+/* ---------- Yapay zekâ ile çizim okuma ---------- */
+const OKUYUCU_URL = '';
+const AI_CONSENT = 'tornaly.aiOk';
+let lastDrawing = null, dvZoom = 1, dvRot = 0;
+
+function loadScript(src) {
+  return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('PDF okuyucu yüklenemedi; internet bağlantısını kontrol edin.')); document.head.appendChild(s); });
+}
+async function pdfToCanvas(file) {
+  if (!window.pdfjsLib) await loadScript('pdf.min.js');
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
+  const pdf = await window.pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  const page = await pdf.getPage(1);
+  const v1 = page.getViewport({ scale: 1 });
+  const scale = Math.min(4, 2000 / Math.max(v1.width, v1.height));
+  const vp = page.getViewport({ scale });
+  const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+  const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+  await page.render({ canvasContext: ctx, viewport: vp }).promise;
+  return c;
+}
+async function imageToCanvas(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('Bu resim açılamadı. JPG veya PNG olarak gönderin.')); i.src = url; });
+    const k = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+    return c;
+  } finally { URL.revokeObjectURL(url); }
+}
+function canvasToJpeg(c) {
+  let q = 0.85, u = c.toDataURL('image/jpeg', q);
+  while (u.length > 3.5e6 && q > 0.4) { q -= 0.15; u = c.toDataURL('image/jpeg', q); }
+  return u;
+}
+
+async function readDrawing(file) {
+  let ok = false; try { ok = localStorage.getItem(AI_CONSENT) === '1'; } catch {}
+  if (!ok) {
+    ok = await ask('Ölçüleri okumak için çizimin resmi Cloudflare yapay zekâ servisine gönderilir. Resim saklanmaz ve yapay zekâ eğitiminde kullanılmaz. DXF ve SVG çizimler ise hiç gönderilmez. Devam edilsin mi?');
+    if (!ok) return;
+    try { localStorage.setItem(AI_CONSENT, '1'); } catch {}
+  }
+  setSrc('file', true);
+  state.pieces = null; $('#layerBox').hidden = true; $('#scaleBox').hidden = true;
+  $('#fileInfo').innerHTML = '<p style="border-left-color:var(--steel)"><span class="busy" aria-hidden="true"></span>Çizim hazırlanıyor…</p>';
+  let canvas;
+  try { canvas = /pdf$/i.test(file.name) || file.type === 'application/pdf' ? await pdfToCanvas(file) : await imageToCanvas(file); }
+  catch (err) { return failLoad(err.message || 'Dosya açılamadı.'); }
+  const resim = canvasToJpeg(canvas);
+  lastDrawing = { name: file.name.replace(/\.[^.]+$/, ''), src: resim };
+  await sendDrawing(resim);
+}
+
+async function sendDrawing(resim) {
+  if (!OKUYUCU_URL) return failLoad('Çizim okuma servisi henüz kurulmadı. Ölçüleri Hızlı parça ile girebilirsiniz.');
+  if (!navigator.onLine) return failLoad('Çizim okumak için internet bağlantısı gerekli. DXF çizimler ve Hızlı parça internetsiz çalışır.');
+  $('#fileInfo').innerHTML = '<p style="border-left-color:var(--steel)"><span class="busy" aria-hidden="true"></span>Yapay zekâ ölçüleri okuyor… (10–40 saniye)</p>';
+  const ctrl = new AbortController(), tm = setTimeout(() => ctrl.abort(), 90000);
+  let res;
+  try {
+    const r = await fetch(OKUYUCU_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resim }), signal: ctrl.signal });
+    res = await r.json().catch(() => ({ ok: false, hata: 'Sunucu yanıtı okunamadı' }));
+    if (!r.ok && !res.hata) res = { ok: false, hata: 'Sunucu hatası ' + r.status };
+  } catch (err) {
+    res = { ok: false, hata: err.name === 'AbortError' ? 'Okuma çok uzun sürdü' : 'Bağlantı kurulamadı' };
+  } finally { clearTimeout(tm); }
+  if (!res.ok) return failLoad(`Çizim okunamadı (${res.hata}). Günlük ücretsiz okuma sınırı dolmuş olabilir; ölçüleri Hızlı parça ile girin ya da yarın tekrar deneyin.`);
+  applyAI(res.veri || {});
+}
+
+const num0 = v => { const n = parseFloat(String(v ?? '').replace(',', '.')); return isFinite(n) && n > 0 ? n : 0; };
+const MAT_KEYS = [[/c\s?45|ck\s?45|1\.0503|sae\s?1045/i, 'c45'], [/st\s?37|s235|st\s?52|s355/i, 'st37'], [/316/, 'ss316'], [/304|paslanmaz|inox|x5crni/i, 'ss304'],
+  [/7075/, 'al7075'], [/6061|6082|alüminyum|aluminyum|almg/i, 'al6061'], [/pom|delrin|asetal/i, 'pom'], [/pa\s?6|naylon|kestamid/i, 'pa6'],
+  [/ggg|sfero|en-gjs/i, 'ggg40'], [/gg\s?\d|gri dökme|en-gjl/i, 'gg25'], [/döküm çeli|gs-|g\d\d/i, 'gs'], [/alsi|al-si|etial/i, 'alsi'], [/zamak/i, 'zamak'], [/bronz|cusn/i, 'cusn'], [/pirinç|cuzn|ms58/i, 'brass'], [/bakır|cu-etp/i, 'cu']];
+
+function applyAI(v) {
+  const tip = String(v.parca_tipi || '').toLowerCase();
+  const steps = (Array.isArray(v.kademeler) ? v.kademeler : []).map(s => ({ d: num0(s.dis_cap), di: num0(s.ic_cap), l: num0(s.boy) })).filter(s => s.d > 0 && s.l > 0);
+  const pl = v.plaka || {}, dr = v.daire || {}, holes = (Array.isArray(v.delikler) ? v.delikler : []).map(h => ({ d: num0(h.cap), n: Math.round(num0(h.adet)) || 1 })).filter(h => h.d > 0);
+  const t = num0(v.kalinlik);
+  let shape, proc = state.proc;
+  if ((tip === 'donel' || (!tip && steps.length)) && steps.length) {
+    shape = 'mil'; state.quick.mil.steps = steps.slice(0, 20);
+    const minIn = Math.min(...steps.map(s => s.di || 0));
+    state.params.torna.stockBore = minIn > 20 ? Math.floor((minIn - 6) / 5) * 5 : 0;
+    if (proc === 'dokum') state.params.dokum.shape = 'rev'; else proc = 'torna';
+  } else if (tip === 'daire' && num0(dr.dis_cap)) {
+    shape = 'flans';
+    const big = holes.sort((a, b) => b.n - a.n)[0];
+    Object.assign(state.quick.flans, { D: num0(dr.dis_cap), d: num0(dr.ic_cap), bcd: num0(dr.delik_cember_cap) || 0, boltD: big ? big.d : 0, boltN: big ? big.n : 0, t: t || state.quick.flans.t });
+  } else if (num0(pl.en) && num0(pl.boy)) {
+    shape = 'plaka';
+    const hs = holes.slice().sort((a, b) => b.d - a.d), mid = hs.find(h => h.n === 1 && h.d >= Math.min(num0(pl.en), num0(pl.boy)) * 0.25), rest = hs.filter(h => h !== mid).sort((a, b) => b.n - a.n)[0];
+    Object.assign(state.quick.plaka, { w: num0(pl.en), h: num0(pl.boy), r: num0(pl.kose_r), midD: mid ? mid.d : 0, holeD: rest ? rest.d : 0, holeN: rest ? rest.n : 0 });
+    if (proc === 'torna') proc = t && t <= 15 ? 'sac' : 'freze';
+  } else {
+    return failLoad('Yapay zekâ bu çizimden kullanılabilir ölçü çıkaramadı. Daha net bir fotoğraf deneyin ya da ölçüleri Hızlı parça ile girin.');
+  }
+  if (shape !== 'mil' && proc === 'dokum') state.params.dokum.shape = 'ext';
+  if (t && shape !== 'mil') ['sac', 'freze', 'dokum'].forEach(p => { if (state.params[p] && 't' in state.params[p]) state.params[p].t = t; });
+  state.quick.shape = shape;
+  const mk = v.malzeme ? MAT_KEYS.find(([re]) => re.test(String(v.malzeme))) : null;
+  if (proc !== state.proc) setProc(proc, true);
+  if (mk && prof.materials.some(m => m.id === mk[1])) { state.mat[state.proc] = mk[1]; renderMatSel(); renderProcFields(); }
+  const qn = Math.round(num0(v.adet)); if (qn > 1) $('#qtys').value = [...new Set([1, qn, qn * 5])].join(', ');
+  const g = Math.max(0, Math.min(1, Number(v.guven) || 0));
+  showAIBox(v, g, mk);
+  if (lastDrawing) setPartName(lastDrawing.name);
+  setSrc('quick');
+}
+
+function showAIBox(v, g, mk) {
+  const low = g < 0.6;
+  $('#aiBox').innerHTML = `<img src="${lastDrawing ? lastDrawing.src : ''}" alt="Okunan çizim" id="aiThumb">
+    <div><p><b>Ölçüler çizimden okundu.</b> ${low ? '<span class="warn">Okuma güveni düşük;</span> ' : ''}Değerleri çizimle tek tek karşılaştırın, gerekirse düzeltin.</p>
+    ${v.malzeme ? `<p>Malzeme: ${esc(v.malzeme)}${mk ? '' : ' <span class="warn">(listede yok, elle seçin)</span>'}</p>` : ''}
+    ${v.notlar ? `<p class="muted">${esc(String(v.notlar).slice(0, 240))}</p>` : ''}
+    <div class="row"><button class="btn" id="aiShow">Çizimi büyüt</button><button class="btn ghost" id="aiRetry">Döndürüp tekrar oku</button></div></div>`;
+  $('#aiBox').hidden = false; $('#quickNote').hidden = true;
+  $('#aiThumb').onclick = $('#aiShow').onclick = () => openView();
+  $('#aiRetry').onclick = async () => {
+    if (!lastDrawing) return;
+    const img = new Image(); img.src = lastDrawing.src; await img.decode();
+    const c = document.createElement('canvas'); c.width = img.height; c.height = img.width;
+    const x = c.getContext('2d'); x.translate(c.width, 0); x.rotate(Math.PI / 2); x.drawImage(img, 0, 0);
+    lastDrawing.src = canvasToJpeg(c);
+    setSrc('file', true); await sendDrawing(lastDrawing.src);
+  };
+}
+function hideAIBox() { $('#aiBox').hidden = true; $('#quickNote').hidden = false; }
+
+function openView() {
+  if (!lastDrawing) return;
+  dvZoom = 1; dvRot = 0; $('#dvImg').src = lastDrawing.src; layoutView(); $('#drawView').hidden = false;
+}
+function layoutView() {
+  const img = $('#dvImg'), box = $('#dvScroll'), w = box.clientWidth || window.innerWidth;
+  img.style.width = (w * dvZoom) + 'px';
+  img.style.transform = dvRot ? `rotate(${dvRot}deg) translate(${dvRot === 90 ? '0,-100%' : dvRot === 180 ? '-100%,-100%' : '-100%,0'})` : '';
+}
+$('#dvPlus').onclick = () => { dvZoom = Math.min(6, dvZoom * 1.5); layoutView(); };
+$('#dvMinus').onclick = () => { dvZoom = Math.max(1, dvZoom / 1.5); layoutView(); };
+$('#dvRot').onclick = () => { dvRot = (dvRot + 90) % 360; layoutView(); };
+$('#dvClose').onclick = () => { $('#drawView').hidden = true; };
+
+
+/* ---------- Vektör PDF okuma (telefonda) ---------- */
+async function loadPdfJs() {
+  if (!window.pdfjsLib) await loadScript('pdf.min.js');
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
+  return window.pdfjsLib;
+}
+function busyMsg(t) { $('#fileInfo').innerHTML = `<p style="border-left-color:var(--steel)"><span class="busy" aria-hidden="true"></span>${esc(t)}</p>`; }
+
+async function loadPDF(file) {
+  setSrc('file', true); hideAIBox(); $('#scaleChips').hidden = true;
+  busyMsg('PDF çizim okunuyor…');
+  let lib, pdf, page;
+  try {
+    lib = await loadPdfJs();
+    pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+    page = await pdf.getPage(1);
+  } catch (err) { return failLoad(err && err.message && /yüklenemedi/.test(err.message) ? err.message : 'PDF açılamadı. Dosya şifreli veya bozuk olabilir.'); }
+  const name = file.name.replace(/\.pdf$/i, '');
+  const ex = extractPdfVectors(await page.getOperatorList(), lib.OPS, page.view);
+  let texts = [], items = [];
+  try { items = (await page.getTextContent()).items.filter(i => i.str && i.str.trim()); texts = items.map(i => i.str); } catch {}
+  const KK = 25.4 / 72;
+  state.textPts = items.filter(i => (i.str.match(/[A-Za-zÇĞİÖŞÜçğıöşü]/g) || []).length >= 3).map(i => [i.transform[4] * KK, i.transform[5] * KK]);
+  if (ex.pieces.length < 3) {
+    if (ex.images > 0) {
+      const c = await pdfToCanvas(file).catch(() => null);
+      return showImageRef(null, c, name, 'Bu PDF taranmış bir resim; içinde çizgi verisi yok.');
+    }
+    return failLoad('PDF içinde çizim bulunamadı.');
+  }
+  // Varsayılan katman: en kalın düz çizgiler; olmazsa tüm düz çizgiler; olmazsa hepsi
+  const groups = {}; ex.pieces.forEach(p => { (groups[p.layer] = groups[p.layer] || { w: p.w, dash: p.dash, n: 0 }).n++; });
+  const solid = Object.entries(groups).filter(([, g]) => !g.dash), maxW = Math.max(0, ...solid.map(([, g]) => g.w));
+  const tries = [solid.filter(([, g]) => g.w >= maxW - 0.01).map(([k]) => k), solid.filter(([, g]) => g.w >= maxW * 0.7).map(([k]) => k), solid.map(([k]) => k), Object.keys(groups)];
+  let on = tries[tries.length - 1];
+  for (const cand of tries) {
+    if (!cand.length) continue;
+    try { const pcs = ex.pieces.filter(p => cand.includes(p.layer)); const { loops } = Core.buildLoops(pcs, 0.05); Core.analyze(dropTextBoxes(loops, 1)); on = cand; break; } catch {}
+  }
+  state.pieces = ex.pieces; state.fileName = name; state.skipped = {}; state.scale = 1;
+  state.layerOn = {}; Object.keys(groups).forEach(k => state.layerOn[k] = on.includes(k));
+  const msgs = [];
+  if (ex.pages > 1) msgs.push(['warn', `PDF'in ${ex.pages} sayfası var; yalnızca ilk sayfa okundu.`]);
+  // Torna parçası mı? (Ø işaretleri)
+  const nDia = texts.filter(s => /[Ø⌀ø∅]/.test(s)).length;
+  state.fileMsgs = msgs;
+  renderLayers(); rebuildPart();
+  if (nDia >= 2 && state.part && !state.part.holes.length && looksTurned(state.part) && state.proc !== 'torna' && state.proc !== 'dokum') {
+    const bb = state.part.bb; state.params.torna.axis = 'orta'; state.params.torna.vert = bb.h > bb.w * 1.15 ? 1 : 0;
+    setProc('torna', true); state.geoSig = ''; msgs.push(['ok', 'Çizimde çap (Ø) ölçüleri var; parça torna parçası kabul edildi. Değilse İşlem bölümünden değiştirin.']);
+  }
+  else if (state.part && state.proc === 'torna' && (state.part.holes.length || !looksTurned(state.part))) {
+    setProc('sac', true); state.geoSig = ''; msgs.push(['ok', 'Parça düz/delikli görünüyor; Sac / lazer seçildi. Kalınlığı kontrol edin ya da İşlem bölümünden değiştirin.']);
+  }
+  const tm = texts.join(' ').match(/(?:\bt\s*=\s*|kal[ıi]nl[ıi]k\s*[:=]?\s*|\bs\s*=\s*)(\d+(?:[.,]\d+)?)/i);
+  if (tm && state.proc !== 'torna' && !(state.proc === 'dokum' && state.params.dokum.shape === 'rev')) {
+    const tv = parseFloat(tm[1].replace(',', '.'));
+    if (tv > 0 && tv < 500) { state.params[state.proc].t = tv; renderGeoFields(); state.geoSig = ''; msgs.push(['ok', `Kalınlık çizimden okundu: ${fmt(tv, tv % 1 ? 1 : 0)} mm.`]); }
+  }
+  // Ölçeği çizimdeki ölçü yazılarından bul
+  const nums = pdfNumbers(texts.filter(s => (s.match(/[A-Za-zÇĞİÖŞÜçğıöşü]/g) || []).length < 2 || /^\s*\d+\s*[xX×]\s*[Ø⌀]/.test(s)));
+  const sm = texts.join(' ').match(/(?:ÖLÇEK|OLCEK|ÖLCEK|SCALE|MASSTAB|MAßSTAB)\s*[:.]?\s*(\d+(?:[.,]\d+)?)\s*:\s*(\d+(?:[.,]\d+)?)/i);
+  const declared = sm ? parseFloat(sm[2].replace(',', '.')) / parseFloat(sm[1].replace(',', '.')) : 0;
+  if (state.part) {
+    let k = guessScale(state.part.bb, nums);
+    if (declared > 0 && isFinite(declared) && (!k || Math.abs(k - declared) > 1e-6)) {
+      if (k && scaleScore(state.part.bb, nums, declared) < scaleScore(state.part.bb, nums, k)) msgs.push(['warn', `Antette ölçek ${sm[1]}:${sm[2]} yazıyor, ölçüler ise farklı bir ölçeğe uyuyor. Antetteki ölçek kullanıldı; genişliği kontrol edin.`]);
+      k = declared;
+    }
+    if (k && k !== 1) { state.scale = k; msgs.push(['ok', `Çizim ölçeği ${k > 1 ? '1:' + fmtK(k) : fmtK(1 / k) + ':1'} olarak bulundu ve uygulandı.`]); }
+    else if (!k) msgs.push(['warn', 'Çizim ölçeği yazılardan bulunamadı; kâğıt üzerindeki ölçü kullanıldı. Aşağıdan parçanın gerçek genişliğini girin ya da çizimdeki ölçüye dokunun.']);
+    else msgs.push(['ok', 'Çizim ölçeği 1:1 olarak doğrulandı.']);
+  }
+  rebuildPart();
+  showScaleChips(nums);
+  setPartName(name);
+}
+const fmtK = k => String(Math.round(k * 100) / 100).replace('.', ',');
+function ptIn(pt, poly) { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const a = poly[i], b = poly[j]; if (((a[1] > pt[1]) !== (b[1] > pt[1])) && (pt[0] < (b[0] - a[0]) * (pt[1] - a[1]) / (b[1] - a[1]) + a[0])) c = !c; } return c; }
+// Antet/tablo gibi içinde yazı olan kutuları parça sayma
+function dropTextBoxes(loops, k) {
+  if (!state.textPts || !state.textPts.length) return loops;
+  const tp = state.textPts.map(([x, y]) => [x * k, y * k]);
+  const keep = loops.filter(l => tp.filter(p => ptIn(p, l)).length < 2);
+  return keep.length ? keep : loops;
+}
+// Dış hat yatay ya da dikey eksene göre simetrik mi (torna parçası yan görünüşü)
+function looksTurned(part) {
+  const o = part.outer, bb = part.bb, A = Math.abs(Core.sArea(o));
+  let cx = 0, cy = 0; for (let i = 0, n = o.length; i < n; i++) { const p = o[i], q = o[(i + 1) % n], c = p[0] * q[1] - q[0] * p[1]; cx += (p[0] + q[0]) * c; cy += (p[1] + q[1]) * c; }
+  const s = Core.sArea(o) * 6; cx /= s; cy /= s;
+  const symY = Math.abs(cy - (bb.y0 + bb.y1) / 2) < bb.h * 0.01, symX = Math.abs(cx - (bb.x0 + bb.x1) / 2) < bb.w * 0.01;
+  return A > 0 && (symY || symX);
+}
+
+function extractPdfVectors(ol, OPS, view) {
+  const K = 25.4 / 72, pieces = []; let ctm = [1, 0, 0, 1, 0, 0], lw = 1, dash = false, images = 0;
+  const stack = [];
+  const mul = (m, n) => [m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1], m[0] * n[2] + m[2] * n[3], m[1] * n[2] + m[3] * n[3], m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5]];
+  const tp = (x, y) => [(ctm[0] * x + ctm[2] * y + ctm[4]) * K, (ctm[1] * x + ctm[3] * y + ctm[5]) * K];
+  let subs = [], cur = null, last = null, start = null;
+  const endSub = closed => { if (cur && cur.pts.length > 1) { if (closed) cur.closed = true; subs.push(cur); } cur = null; };
+  const bez = (p0, p1, p2, p3) => { const out = []; for (let i = 1; i <= 12; i++) { const t = i / 12, u = 1 - t; out.push([u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0], u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1]]); } return out; };
+  const fns = ol.fnArray, args = ol.argsArray;
+  for (let i = 0; i < fns.length; i++) {
+    const fn = fns[i], a = args[i];
+    switch (fn) {
+      case OPS.save: stack.push([ctm, lw, dash]); break;
+      case OPS.restore: if (stack.length) [ctm, lw, dash] = stack.pop(); break;
+      case OPS.transform: ctm = mul(ctm, a); break;
+      case OPS.paintFormXObjectBegin: stack.push([ctm, lw, dash]); if (a && a[0]) ctm = mul(ctm, a[0]); break;
+      case OPS.paintFormXObjectEnd: if (stack.length) [ctm, lw, dash] = stack.pop(); break;
+      case OPS.setLineWidth: lw = a[0]; break;
+      case OPS.setDash: dash = !!(a && a[0] && a[0].length && a[0].some(v => v > 0)); break;
+      case OPS.paintImageXObject: case OPS.paintInlineImageXObject: case OPS.paintImageMaskXObject: images++; break;
+      case OPS.constructPath: {
+        const ops = a[0], c = a[1]; let j = 0;
+        for (const op of ops) {
+          if (op === OPS.moveTo) { endSub(false); const p = tp(c[j], c[j + 1]); j += 2; cur = { pts: [p], closed: false }; last = p; start = p; }
+          else if (op === OPS.lineTo) { const p = tp(c[j], c[j + 1]); j += 2; if (!cur) cur = { pts: [last || p], closed: false }; cur.pts.push(p); last = p; }
+          else if (op === OPS.curveTo) { const p1 = tp(c[j], c[j + 1]), p2 = tp(c[j + 2], c[j + 3]), p3 = tp(c[j + 4], c[j + 5]); j += 6; if (!cur) cur = { pts: [last || p1], closed: false }; cur.pts.push(...bez(last || p1, p1, p2, p3)); last = p3; }
+          else if (op === OPS.curveTo2) { const p2 = tp(c[j], c[j + 1]), p3 = tp(c[j + 2], c[j + 3]); j += 4; const p0 = last || p2; if (!cur) cur = { pts: [p0], closed: false }; cur.pts.push(...bez(p0, p0, p2, p3)); last = p3; }
+          else if (op === OPS.curveTo3) { const p1 = tp(c[j], c[j + 1]), p3 = tp(c[j + 2], c[j + 3]); j += 4; const p0 = last || p1; if (!cur) cur = { pts: [p0], closed: false }; cur.pts.push(...bez(p0, p1, p3, p3)); last = p3; }
+          else if (op === OPS.closePath) { endSub(true); last = start; }
+          else if (op === OPS.rectangle) { endSub(false); const x = c[j], y = c[j + 1], w = c[j + 2], h = c[j + 3]; j += 4; subs.push({ pts: [tp(x, y), tp(x + w, y), tp(x + w, y + h), tp(x, y + h)], closed: true }); }
+        }
+        break;
+      }
+      case OPS.stroke: case OPS.closeStroke: case OPS.fillStroke: case OPS.eoFillStroke: case OPS.closeFillStroke: case OPS.closeEOFillStroke: {
+        endSub(fn === OPS.closeStroke || fn === OPS.closeFillStroke || fn === OPS.closeEOFillStroke);
+        const scale = Math.sqrt(Math.abs(ctm[0] * ctm[3] - ctm[1] * ctm[2])) || 1;
+        const wmm = Math.max(0.01, Math.round(lw * scale * K * 20) / 20);
+        const layer = `Çizgi ${String(wmm.toFixed(2)).replace('.', ',')} mm${dash ? ' (kesik)' : ''}`;
+        subs.forEach(s => { if (s.closed && s.pts.length > 2) { const f = s.pts[0], l = s.pts[s.pts.length - 1]; if (Math.hypot(f[0] - l[0], f[1] - l[1]) < 1e-6) s.pts.pop(); } pieces.push({ layer, w: wmm, dash, pts: s.pts, closed: s.closed && s.pts.length > 2 }); });
+        subs = []; break;
+      }
+      case OPS.fill: case OPS.eoFill: case OPS.endPath: endSub(false); subs = []; break;
+    }
+  }
+  // Sayfa çerçevesini ele
+  const pw = (view[2] - view[0]) * K, ph = (view[3] - view[1]) * K;
+  const kept = pieces.filter(p => { const b = Core.bbox(p.pts); return !(b.w >= pw * 0.8 || b.h >= ph * 0.8); });
+  return { pieces: kept, images, pages: ol.pages || 1 };
+}
+
+function pdfNumbers(texts) {
+  const out = new Set();
+  texts.forEach(str => (str.replace(/(\d),(\d)/g, '$1.$2').match(/\d+(?:\.\d+)?/g) || []).forEach(s => { const n = parseFloat(s); if (n >= 2 && n <= 20000) out.add(n); }));
+  return [...out].sort((a, b) => b - a);
+}
+function scaleScore(bb, nums, k) { let s = 0; [bb.w, bb.h].forEach(d => { if (nums.some(n => Math.abs(n - d * k) <= Math.max(0.15, n * 0.005))) s += 1; }); return s; }
+function guessScale(bb, nums) {
+  if (!nums.length) return 0;
+  const ks = [1, 2, 2.5, 4, 5, 10, 20, 50, 0.5, 0.4, 0.25, 0.2, 0.1];
+  let best = 0, bestScore = 0;
+  ks.forEach(k => {
+    const s = scaleScore(bb, nums, k);
+    if (s > bestScore || (s === bestScore && s > 0 && k === 1)) { best = k; bestScore = s; }
+  });
+  return bestScore > 0 ? best : 0;
+}
+function showScaleChips(nums) {
+  const box = $('#scaleChips'), list = nums.slice(0, 14);
+  if (!list.length) { box.hidden = true; return; }
+  box.innerHTML = '<small>Çizimdeki ölçüler: genişliğe ait olana dokunun</small>' + list.map(n => `<button type="button" data-n="${n}">${fmt(n, n % 1 ? 2 : 0)}</button>`).join('');
+  box.hidden = false;
+  box.querySelectorAll('button').forEach(b => b.onclick = () => { $('#scaleW').value = b.dataset.n; $('#scaleW').dispatchEvent(new Event('change')); });
+}
+
+/* ---------- Fotoğraf / taranmış çizim: ekranda göster ---------- */
+async function showImageRef(file, canvas, name, why) {
+  try { if (!canvas) canvas = await imageToCanvas(file); } catch (err) { return failLoad(err.message); }
+  lastDrawing = { name: name || (file ? file.name.replace(/\.[^.]+$/, '') : 'Çizim'), src: canvas.toDataURL('image/jpeg', 0.85) };
+  state.pieces = null; $('#layerBox').hidden = true; $('#scaleBox').hidden = true;
+  setSrc('quick');
+  $('#aiBox').innerHTML = `<img src="${lastDrawing.src}" alt="Müşteri çizimi" id="aiThumb">
+    <div><p><b>${esc(why || 'Bu bir fotoğraf; içinde çizgi verisi yok.')}</b> Çizimi büyütüp ölçüleri aşağıya girin.</p>
+    <p class="muted">Fotoğraf ve taramaların otomatik okunması üzerinde çalışıyoruz.</p>
+    <div class="row"><button class="btn" id="aiShow">Çizimi büyüt</button></div></div>`;
+  $('#aiBox').hidden = false; $('#quickNote').hidden = true;
+  $('#aiThumb').onclick = $('#aiShow').onclick = () => openView();
+  setPartName(lastDrawing.name);
+}
 
 /* ---------- Ölçek düzeltme ---------- */
 $('#scaleW').onchange = () => {
@@ -1041,7 +1406,7 @@ function setSrc(s, silent) {
 }
 
 const isRevMode = () => state.proc === 'torna' || (state.proc === 'dokum' && state.params.dokum.shape === 'rev');
-const QSHAPES = { plaka: 'Plaka', flans: 'Flanş / disk', mil: 'Mil / burç' };
+const QSHAPES = { plaka: 'Plaka', flans: 'Daire / flanş', mil: 'Mil / burç' };
 function quickShapes() { return isRevMode() ? ['mil', 'flans'] : ['plaka', 'flans']; }
 
 function renderQuick() {
@@ -1054,24 +1419,23 @@ function renderQuick() {
     h += f('w', 'Genişlik', 'mm') + f('h', 'Boy', 'mm') + f('r', 'Köşe yarıçapı', 'mm') + f('midD', 'Orta delik çapı', 'mm', '0 = yok') + f('holeD', 'Bağlantı deliği çapı', 'mm') + f('holeN', 'Bağlantı deliği adedi', 'adet') + '</div>';
     h += `<p class="note">${rev ? '' : 'Kalınlık yukarıdaki işlem bölümünden girilir. '}Deliklerin yeri hesaba etki etmez; sadece çap ve adet önemlidir.</p>`;
   } else if (Q.shape === 'flans') {
-    h += f('D', 'Dış çap', 'mm') + f('d', 'İç delik çapı', 'mm', '0 = dolu disk');
+    h += f('D', 'Dış çap', 'mm') + f('d', 'İç delik çapı', 'mm', '0 = dolu daire');
     if (rev) h += f('t', 'Kalınlık', 'mm') + '</div><p class="note">Tornada civata delikleri hesaba katılmaz; delme süresini finiş süresine ekleyin.</p>';
     else h += f('bcd', 'Delik çemberi çapı', 'mm') + f('boltD', 'Civata deliği çapı', 'mm') + f('boltN', 'Civata deliği adedi', 'adet') + '</div><p class="note">Kalınlık yukarıdaki işlem bölümünden girilir.</p>';
   } else {
-    h += f('bore', 'Boydan boya iç delik çapı', 'mm', '0 = dolu mil') + '</div>';
-    h += `<div class="qsteps">` + S.steps.map((st, i) => `<div class="qstep"><b>${i + 1}.</b>
-      <label class="f"><span>Çap</span><div class="in"><input type="number" inputmode="decimal" data-si="${i}" data-sk="d" value="${st.d}"><em>mm</em></div></label>
-      <label class="f"><span>Boy</span><div class="in"><input type="number" inputmode="decimal" data-si="${i}" data-sk="l" value="${st.l}"><em>mm</em></div></label>
+    h += '</div><p class="note" style="margin-top:0">Ölçüler mm. Kademeleri soldan sağa sırayla girin. İç çap 0 = dolu.</p>';
+    const inp = (i, k, v) => `<div class="in"><input type="number" inputmode="decimal" min="0" data-si="${i}" data-sk="${k}" value="${v ?? 0}" aria-label="${i + 1}. kademe ${k === 'd' ? 'dış çap' : k === 'di' ? 'iç çap' : 'boy'}"></div>`;
+    h += `<div class="qsteps"><div class="qstep qhead"><span></span><small>Dış Ø</small><small>İç Ø</small><small>Boy</small><span></span></div>` + S.steps.map((st, i) => `<div class="qstep"><b>${i + 1}.</b>
+      ${inp(i, 'd', st.d)}${inp(i, 'di', st.di)}${inp(i, 'l', st.l)}
       <button class="btn ghost" data-sdel="${i}" aria-label="${i + 1}. kademeyi sil" ${S.steps.length < 2 ? 'disabled' : ''}>×</button></div>`).join('') + `</div>
-      <div class="row" style="margin-top:8px"><button class="btn" id="qAddStep" ${S.steps.length >= 10 ? 'disabled' : ''}>Kademe ekle</button></div>
-      <p class="note">Kademeleri soldan sağa sırayla girin. Tek çaplı mil için tek kademe yeterli.</p>`;
+      <div class="row" style="margin-top:8px"><button class="btn" id="qAddStep" ${S.steps.length >= 20 ? 'disabled' : ''}>Kademe ekle</button></div>`;
   }
   $('#quickForm').innerHTML = h;
   $('#quickForm').querySelectorAll('[data-qs]').forEach(b => b.onclick = () => { Q.shape = b.dataset.qs; renderQuick(); });
   $('#quickForm').querySelectorAll('[data-qk]').forEach(i => i.oninput = () => { const v = parseFloat(i.value.replace(',', '.')); if (v >= 0) { S[i.dataset.qk] = v; buildQuick(); } });
   $('#quickForm').querySelectorAll('[data-si]').forEach(i => i.oninput = () => { const v = parseFloat(i.value.replace(',', '.')); if (v >= 0) { S.steps[+i.dataset.si][i.dataset.sk] = v; buildQuick(); } });
   $('#quickForm').querySelectorAll('[data-sdel]').forEach(b => b.onclick = () => { S.steps.splice(+b.dataset.sdel, 1); renderQuick(); });
-  const add = $('#qAddStep'); if (add) add.onclick = () => { const l = S.steps[S.steps.length - 1]; S.steps.push({ d: Math.max((S.bore || 0) + 5, l.d - 10, 5), l: 30 }); renderQuick(); };
+  const add = $('#qAddStep'); if (add) add.onclick = () => { const l = S.steps[S.steps.length - 1]; S.steps.push({ d: Math.max((l.di || 0) + 5, l.d - 10, 5), di: l.di || 0, l: 30 }); renderQuick(); };
   buildQuick();
 }
 
@@ -1115,14 +1479,16 @@ function quickLoops() {
     }
     return { loops, name: `Flanş Ø${fmt(D, 0)}` };
   }
-  const b = (S.bore || 0) / 2, st = S.steps.filter(s => s.d > 0 && s.l > 0);
-  if (!st.length) E('En az bir kademe için çap ve boy girin.');
-  if (st.some(s => s.d / 2 <= b)) E('İç delik, en küçük kademe çapından küçük olmalı.');
-  const p = [[0, b]]; let x = 0;
+  const st = S.steps.filter(s => s.d > 0 && s.l > 0);
+  if (!st.length) E('En az bir kademe için dış çap ve boy girin.');
+  const bad = st.findIndex(s => (s.di || 0) >= s.d);
+  if (bad >= 0) E(`${bad + 1}. kademede iç çap dış çaptan küçük olmalı.`);
+  const p = []; let x = 0;
   st.forEach(s => { p.push([x, s.d / 2]); x += s.l; p.push([x, s.d / 2]); });
-  p.push([x, b]);
-  const dmax = Math.max(...st.map(s => s.d));
-  return { loops: [p], name: `${b > 0 ? 'Burç' : 'Mil'} Ø${fmt(dmax, 0)}×${fmt(x, 0)}` };
+  for (let i = st.length - 1; i >= 0; i--) { const r = (st[i].di || 0) / 2, x1 = st.slice(0, i + 1).reduce((a, s) => a + s.l, 0), x0 = x1 - st[i].l; p.push([x1, r], [x0, r]); }
+  const clean = p.filter((q, i) => { const n = p[(i + 1) % p.length]; return Math.hypot(q[0] - n[0], q[1] - n[1]) > 1e-9; });
+  const dmax = Math.max(...st.map(s => s.d)), hollow = st.some(s => (s.di || 0) > 0);
+  return { loops: [clean], name: `${hollow ? 'Burç' : 'Mil'} Ø${fmt(dmax, 0)}×${fmt(x, 0)}` };
 }
 function buildQuick() {
   try {
@@ -1204,7 +1570,7 @@ const curMat = () => prof.materials.find(m => m.id === state.mat[state.proc]) ||
 function renderProcFields() {
   const p = state.proc; let h = '';
   if (p === 'sac') h = num('fire', 'Fire / nesting kaybı', '%') + num('speed', 'Kesim hızı', 'mm/dk', 'any', 'Malzeme ve kalınlığa göre') + num('pierceSec', 'Delme süresi', 'sn') + num('bends', 'Bükme sayısı', 'adet', '1') + num('setupMin', 'Makine ayarı', 'dk');
-  if (p === 'torna') h = num('diaAllow', 'Çap payı', 'mm') + num('lenAllow', 'Boy + kesim payı', 'mm') + num('mrr', 'Talaş kaldırma', 'cm³/dk') + num('finishMin', 'Finiş ve kontrol', 'dk') + num('setupMin', 'Bağlama ve ayar', 'dk');
+  if (p === 'torna') h = num('diaAllow', 'Çap payı', 'mm') + num('lenAllow', 'Boy + kesim payı', 'mm') + num('stockBore', 'Hammadde iç çapı', 'mm', 'any', '0 = dolu çubuk; boru ise iç çapı') + num('mrr', 'Talaş kaldırma', 'cm³/dk') + num('finishMin', 'Finiş ve kontrol', 'dk') + num('setupMin', 'Bağlama ve ayar', 'dk');
   if (p === 'freze') h = num('allow', 'Kenar payı (her yön)', 'mm') + num('tAllow', 'Yükseklik payı', 'mm') + num('mrr', 'Talaş kaldırma', 'cm³/dk') + num('finishMin', 'Finiş ve kontrol', 'dk') + num('setupMin', 'Bağlama ve ayar', 'dk');
   if (p === 'dokum') {
     const ms = prof.methods.filter(m => m.on);
@@ -1317,6 +1683,7 @@ const viewer = (() => {
       g.rotateX(-Math.PI / 2);
     } else {
       const pts = geo.profile.map(([r, h]) => new THREE.Vector2(Math.max(0, r), h));
+      if (pts.length > 2 && pts[0].distanceTo(pts[pts.length - 1]) > 1e-6) pts.push(pts[0].clone());
       g = new THREE.LatheGeometry(pts, 72);
       g.rotateZ(Math.PI / 2);
     }
