@@ -337,6 +337,10 @@ details summary{cursor:pointer;font-weight:600}
     <button class="btn ghost" id="pReset">Varsayılanlara dön</button>
   </div>
 
+  <h3>Pro üyelik</h3>
+  <p class="note">Fotoğraf ve taranmış çizimlerin otomatik okunması Pro özelliğidir. Size verilen Pro kodunu girin.</p>
+  <div class="row"><input id="proKod" class="full" placeholder="Pro kodu" autocomplete="off" autocapitalize="characters" style="flex:1;min-width:0"><button class="btn" id="proKaydet">Kaydet</button></div>
+
   <h3>Görünüm</h3>
   <div class="seg" id="themeSeg" style="grid-template-columns:repeat(3,1fr)">
     <button data-t="auto" aria-pressed="true">Otomatik</button>
@@ -1051,8 +1055,8 @@ function showMsgs(m) { $('#fileInfo').innerHTML = m.map(([k, t]) => `<p class="$
 
 
 /* ---------- Yapay zekâ ile çizim okuma ---------- */
-const OKUYUCU_URL = '';
-const AI_CONSENT = 'tornaly.aiOk';
+const OKUYUCU_URL = 'https://tornaly-okuyucu.yolhava-destek.workers.dev'; // Cloudflare worker; anahtar eklenene kadar kapalı kalır
+const AI_CONSENT = 'tornaly.aiOk2';
 let lastDrawing = null, dvZoom = 1, dvRot = 0;
 
 function loadScript(src) {
@@ -1087,38 +1091,54 @@ function canvasToJpeg(c) {
   return u;
 }
 
-async function readDrawing(file) {
+// Okuyucu servis açık mı? (Anthropic anahtarı Cloudflare'e eklenince kendiliğinden açılır)
+let aiDurum = null;
+async function aiAktif() {
+  if (!OKUYUCU_URL || !/^https:/.test(OKUYUCU_URL) || !navigator.onLine) return false;
+  if (aiDurum !== null) return aiDurum;
+  try {
+    const ctrl = new AbortController(), tm = setTimeout(() => ctrl.abort(), 6000);
+    const r = await fetch(OKUYUCU_URL.replace(/\/$/, '') + '/durum', { signal: ctrl.signal, cache: 'no-store' });
+    clearTimeout(tm);
+    aiDurum = r.ok && (await r.json()).aktif === true;
+  } catch { return false; }
+  return aiDurum;
+}
+async function sendDrawing(resim) {
+  if (!navigator.onLine) return { ok: false, hata: 'İnternet bağlantısı yok' };
+  const ctrl = new AbortController(), tm = setTimeout(() => ctrl.abort(), 90000);
+  try {
+    const r = await fetch(OKUYUCU_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resim, kod: proKod() }), signal: ctrl.signal });
+    const res = await r.json().catch(() => ({ ok: false, hata: 'Sunucu yanıtı okunamadı' }));
+    if (!r.ok && !res.hata) res.hata = 'Sunucu hatası ' + r.status;
+    return res;
+  } catch (err) {
+    return { ok: false, hata: err.name === 'AbortError' ? 'Okuma çok uzun sürdü' : 'Bağlantı kurulamadı' };
+  } finally { clearTimeout(tm); }
+}
+const PRO_KEY = 'tornaly.proKod';
+function proKod() { try { return (localStorage.getItem(PRO_KEY) || '').trim(); } catch { return ''; } }
+try { $('#proKod').value = proKod(); } catch {}
+$('#proKaydet').onclick = () => {
+  const v = $('#proKod').value.trim().toUpperCase(); $('#proKod').value = v;
+  try { v ? localStorage.setItem(PRO_KEY, v) : localStorage.removeItem(PRO_KEY); } catch {}
+  toast(v ? 'Pro kodu kaydedildi' : 'Pro kodu silindi');
+};
+async function aiRead() {
+  if (!lastDrawing) return;
+  if (!proKod()) { const st0 = $('#aiStatus'); if (st0) st0.innerHTML = '<b>Otomatik okuma Pro özelliğidir.</b> Pro kodunuzu Ayarlar → Pro üyelik bölümüne girin. Kod almak için: yolhava.destek@gmail.com'; return; }
   let ok = false; try { ok = localStorage.getItem(AI_CONSENT) === '1'; } catch {}
   if (!ok) {
-    ok = await ask('Ölçüleri okumak için çizimin resmi Cloudflare yapay zekâ servisine gönderilir. Resim saklanmaz ve yapay zekâ eğitiminde kullanılmaz. DXF ve SVG çizimler ise hiç gönderilmez. Devam edilsin mi?');
+    ok = await ask('Otomatik okuma için yalnızca bu çizimin resmi Anthropic şirketinin Claude yapay zekâ servisine gönderilir. Resim saklanmaz ve yapay zekâ eğitiminde kullanılmaz. Devam edilsin mi?');
     if (!ok) return;
     try { localStorage.setItem(AI_CONSENT, '1'); } catch {}
   }
-  setSrc('file', true);
-  state.pieces = null; $('#layerBox').hidden = true; $('#scaleBox').hidden = true;
-  $('#fileInfo').innerHTML = '<p style="border-left-color:var(--steel)"><span class="busy" aria-hidden="true"></span>Çizim hazırlanıyor…</p>';
-  let canvas;
-  try { canvas = /pdf$/i.test(file.name) || file.type === 'application/pdf' ? await pdfToCanvas(file) : await imageToCanvas(file); }
-  catch (err) { return failLoad(err.message || 'Dosya açılamadı.'); }
-  const resim = canvasToJpeg(canvas);
-  lastDrawing = { name: file.name.replace(/\.[^.]+$/, ''), src: resim };
-  await sendDrawing(resim);
-}
-
-async function sendDrawing(resim) {
-  if (!OKUYUCU_URL) return failLoad('Çizim okuma servisi henüz kurulmadı. Ölçüleri Hızlı parça ile girebilirsiniz.');
-  if (!navigator.onLine) return failLoad('Çizim okumak için internet bağlantısı gerekli. DXF çizimler ve Hızlı parça internetsiz çalışır.');
-  $('#fileInfo').innerHTML = '<p style="border-left-color:var(--steel)"><span class="busy" aria-hidden="true"></span>Yapay zekâ ölçüleri okuyor… (10–40 saniye)</p>';
-  const ctrl = new AbortController(), tm = setTimeout(() => ctrl.abort(), 90000);
-  let res;
-  try {
-    const r = await fetch(OKUYUCU_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resim }), signal: ctrl.signal });
-    res = await r.json().catch(() => ({ ok: false, hata: 'Sunucu yanıtı okunamadı' }));
-    if (!r.ok && !res.hata) res = { ok: false, hata: 'Sunucu hatası ' + r.status };
-  } catch (err) {
-    res = { ok: false, hata: err.name === 'AbortError' ? 'Okuma çok uzun sürdü' : 'Bağlantı kurulamadı' };
-  } finally { clearTimeout(tm); }
-  if (!res.ok) return failLoad(`Çizim okunamadı (${res.hata}). Günlük ücretsiz okuma sınırı dolmuş olabilir; ölçüleri Hızlı parça ile girin ya da yarın tekrar deneyin.`);
+  const st = $('#aiStatus');
+  if (st) st.innerHTML = '<span class="busy" aria-hidden="true"></span>Ölçüler okunuyor… (10–40 saniye)';
+  document.querySelectorAll('#aiRead,#aiRetry').forEach(b => b.disabled = true);
+  const res = await sendDrawing(lastDrawing.src);
+  document.querySelectorAll('#aiRead,#aiRetry').forEach(b => b.disabled = false);
+  if (!res.ok) { const s2 = $('#aiStatus'); if (s2) s2.innerHTML = `<span class="warn">Okunamadı: ${esc(res.hata || 'bilinmeyen hata')}.</span> Ölçüleri aşağıya girebilirsiniz.`; return; }
   applyAI(res.veri || {});
 }
 
@@ -1169,7 +1189,7 @@ function showAIBox(v, g, mk) {
     <div><p><b>Ölçüler çizimden okundu.</b> ${low ? '<span class="warn">Okuma güveni düşük;</span> ' : ''}Değerleri çizimle tek tek karşılaştırın, gerekirse düzeltin.</p>
     ${v.malzeme ? `<p>Malzeme: ${esc(v.malzeme)}${mk ? '' : ' <span class="warn">(listede yok, elle seçin)</span>'}</p>` : ''}
     ${v.notlar ? `<p class="muted">${esc(String(v.notlar).slice(0, 240))}</p>` : ''}
-    <div class="row"><button class="btn" id="aiShow">Çizimi büyüt</button><button class="btn ghost" id="aiRetry">Döndürüp tekrar oku</button></div></div>`;
+    <p class="muted" id="aiStatus"></p><div class="row"><button class="btn" id="aiShow">Çizimi büyüt</button><button class="btn ghost" id="aiRetry">Döndürüp tekrar oku</button></div></div>`;
   $('#aiBox').hidden = false; $('#quickNote').hidden = true;
   $('#aiThumb').onclick = $('#aiShow').onclick = () => openView();
   $('#aiRetry').onclick = async () => {
@@ -1178,7 +1198,8 @@ function showAIBox(v, g, mk) {
     const c = document.createElement('canvas'); c.width = img.height; c.height = img.width;
     const x = c.getContext('2d'); x.translate(c.width, 0); x.rotate(Math.PI / 2); x.drawImage(img, 0, 0);
     lastDrawing.src = canvasToJpeg(c);
-    setSrc('file', true); await sendDrawing(lastDrawing.src);
+    $('#aiThumb').src = lastDrawing.src;
+    await aiRead();
   };
 }
 function hideAIBox() { $('#aiBox').hidden = true; $('#quickNote').hidden = false; }
@@ -1375,11 +1396,14 @@ async function showImageRef(file, canvas, name, why) {
   setSrc('quick');
   $('#aiBox').innerHTML = `<img src="${lastDrawing.src}" alt="Müşteri çizimi" id="aiThumb">
     <div><p><b>${esc(why || 'Bu bir fotoğraf; içinde çizgi verisi yok.')}</b> Çizimi büyütüp ölçüleri aşağıya girin.</p>
-    <p class="muted">Fotoğraf ve taramaların otomatik okunması üzerinde çalışıyoruz.</p>
-    <div class="row"><button class="btn" id="aiShow">Çizimi büyüt</button></div></div>`;
+    <p class="muted" id="aiStatus"></p>
+    <div class="row"><button class="btn" id="aiShow">Çizimi büyüt</button><button class="btn" id="aiRead" hidden>Ölçüleri otomatik oku</button></div></div>`;
   $('#aiBox').hidden = false; $('#quickNote').hidden = true;
   $('#aiThumb').onclick = $('#aiShow').onclick = () => openView();
+  $('#aiRead').onclick = aiRead;
   setPartName(lastDrawing.name);
+  const me = lastDrawing;
+  if (await aiAktif() && lastDrawing === me && $('#aiRead')) $('#aiRead').hidden = false;
 }
 
 /* ---------- Ölçek düzeltme ---------- */
