@@ -166,9 +166,9 @@
   tool('silindir', 'Hesap', 'Hidrolik silindir', 'Yük ve basınçtan çap, mil, burkulma, boru et kalınlığı, 3B ve maliyet', root => {
     const F = form('silindir', [
       { k: 'mode', l: 'Hesap şekli', opts: [['yuk', 'Yük ve basınç verildi → çap bul'], ['cap', 'Çap verildi → kuvvet bul']], d: 'yuk', wide: true },
-      { k: 'yuk', l: 'Kaldırılacak / itilecek yük', u: 'ton', d: 10 }, { k: 'strok', l: 'Strok', u: 'mm', d: 500 },
+      { k: 'yuk', l: 'Kaldırılacak / itilecek yük', u: 'ton', d: 10, hint: 'Silindirin kaldıracağı ya da iteceği en büyük yük' }, { k: 'strok', l: 'Strok', u: 'mm', d: 500, hint: 'Milin dışarı çıkacağı mesafe (kurs boyu)' },
       { k: 'yer', l: 'Kullanım yeri (basınç önerisi)', opts: [['250', 'İş makinesi, kepçe, vinç → 250 bar'], ['210', 'Kaldırma platformu, forklift → 210 bar'], ['200', 'Tarım makinesi, römork → 200 bar'], ['180', 'Damper → 180 bar'], ['160', 'Sanayi makinesi → 160 bar'], ['250p', 'Hidrolik pres → 250 bar']], d: '250', wide: true },
-      { k: 'p', l: 'Çalışma basıncı (0 = öneri)', u: 'bar', d: 0 }, { k: 'tSure', l: 'İstenen çıkış süresi (0 = debiden)', u: 's', d: 0 },
+      { k: 'p', l: 'Çalışma basıncı (0 = öneri)', u: 'bar', d: 0, hint: 'Bilmiyorsanız 0 bırakın' }, { k: 'tSure', l: 'İstenen çıkış süresi (0 = debiden)', u: 's', d: 0, hint: 'Mil kaç saniyede tam açılsın' },
       { k: 'D0', l: 'Piston çapı (çap verildiyse)', u: 'mm', d: 100 }, { k: 'phi', l: 'Alan oranı (piston/halka)', opts: [['1.25', '1,25'], ['1.4', '1,4'], ['1.6', '1,6'], ['2', '2,0']], d: '1.6' },
       { k: 'd0', l: 'Mil çapı (0 = otomatik)', u: 'mm', d: 0 },
       { k: 'kapali', l: 'Kapalı boy, göz-göz (0 = tahmini)', u: 'mm', d: 0 }, { k: 'eta', l: 'Mekanik verim', u: '%', d: 90 },
@@ -530,15 +530,17 @@
       { k: 'tanim', l: 'Ürün', text: true, d: (pre && pre.tanim) || 'Hidrolik silindir', wide: true },
       { k: 'tip', l: 'Test edilen', opts: [['1.5', 'Silindir / valf bloğu (1,5 × çalışma)'], ['2', 'Hortum takımı (2 × çalışma, EN 853/856)']], d: '1.5', wide: true },
       { k: 'pw', l: 'Çalışma basıncı', u: 'bar', d: (pre && pre.pw) || 200 }, { k: 'pt', l: 'Test basıncı (0 = otomatik)', u: 'bar', d: 0 },
-      { k: 'sure', l: 'Test süresi', u: 'dk', d: 5 }, { k: 'dus', l: 'Basınç düşümü', u: 'bar', d: 0 },
-      { k: 'sonuc', l: 'Sonuç', opts: [['ok', 'Sızıntı yok — UYGUN'], ['no', 'Sızıntı var — UYGUN DEĞİL']], d: 'ok' },
+      { note: '<b>Bu bölümü testi atölyede yaptıktan sonra, gördüğünüz değerlerle doldurun.</b> Program test yapmaz; yalnızca yaptığınız testin raporunu hazırlar.' },
+      { k: 'sure', l: 'Test süresi *', u: 'dk', d: '', hint: 'Test basıncında kaç dakika beklettiniz' }, { k: 'dus', l: 'Basınç düşümü *', u: 'bar', d: '', hint: 'Manometrede görülen düşüş (yoksa 0)' },
+      { k: 'sonuc', l: 'Sonuç *', opts: [['', '— seçin —'], ['ok', 'Sızıntı yok — UYGUN'], ['no', 'Sızıntı var — UYGUN DEĞİL']], d: '' },
       { k: 'tarih', l: 'Test tarihi', text: true, d: today }, { k: 'garanti', l: 'Garanti', u: 'ay', d: (pre && pre.garanti) || 6 },
-      { k: 'eden', l: 'Testi yapan', text: true, d: '' }, { k: 'kece', l: 'Keçe seti / not', text: true, d: '', wide: true },
+      { k: 'eden', l: 'Testi yapan *', text: true, d: '' }, { k: 'kece', l: 'Keçe seti / not', text: true, d: '', wide: true },
     ], v => { cur = v; draw(); });
     let cur = null;
     root.innerHTML = F.html + '<div id="hyOut"></div><div class="row" style="margin-top:10px"><button class="btn tape" id="hyP">Raporu yazdır / PDF</button><button class="btn" id="hyL">Etiket yazdır</button><button class="btn ghost" id="hyB">Bakım kaydına ekle</button></div>';
     if (pre && !pre.vals) { const s = saved('test'); Object.assign(s, pre.tanim ? { tanim: pre.tanim } : {}, pre.pw ? { pw: String(pre.pw) } : {}, pre.garanti ? { garanti: String(pre.garanti) } : {}); H().store.set('hyd.in.test', s); root.querySelectorAll('[data-hk]').forEach(i => { if (s[i.dataset.hk] !== undefined) i.value = s[i.dataset.hk]; }); }
     const pt = v => ok(v.pt) ? v.pt : v.pw * (num(v.tip) || 1.5);
+    const missing = v => [!ok(v.pw) && 'çalışma basıncı', !ok(v.sure) && 'test süresi', !(isFinite(v.dus) && v.dus >= 0) && 'basınç düşümü', !v.sonuc && 'sonuç', !String(v.eden || '').trim() && 'testi yapan'].filter(Boolean);
     const gEnd = v => { const d = new Date(v.tarih); if (isNaN(d) || !ok(v.garanti)) return ''; d.setMonth(d.getMonth() + v.garanti); return d.toLocaleDateString('tr-TR'); };
     const qrText = v => `${H().prof().firma || 'Tornaly'}\n${v.tanim}\nNo: ${v.isno || '-'}\nTest: ${f(pt(v), 0)} bar ${v.sure} dk ${v.sonuc === 'ok' ? 'UYGUN' : 'UYGUN DEĞİL'}\nÇalışma: ${f(v.pw, 0)} bar\nTarih: ${new Date(v.tarih).toLocaleDateString('tr-TR')}${gEnd(v) ? '\nGaranti: ' + gEnd(v) : ''}${v.kece ? '\n' + v.kece : ''}${H().prof().tel ? '\nTel: ' + H().prof().tel : ''}`;
     function doc(v) {
@@ -548,14 +550,15 @@
         <div class="meta"><div>Müşteri<br><b>${esc(v.musteri || '-')}</b></div><div>Ürün<br><b>${esc(v.tanim)}</b></div><div>Çalışma basıncı<br><b>${f(v.pw, 0)} bar</b></div><div>Test basıncı<br><b>${f(pt(v), 0)} bar</b></div>
           <div>Test süresi<br><b>${f(v.sure || 0, 0)} dk</b></div><div>Basınç düşümü<br><b>${f(v.dus || 0, 1)} bar</b></div><div>Garanti<br><b>${ok(v.garanti) ? v.garanti + ' ay (' + gEnd(v) + ')' : '-'}</b></div><div>Keçe / not<br><b>${esc(v.kece || '-')}</b></div></div>
         <div style="display:flex;gap:16px;align-items:center;margin:12px 0"><div style="width:120px">${qrSVG(qrText(v))}</div><div style="font-size:1.4rem;font-weight:700;color:${v.sonuc === 'ok' ? '#2B6683' : '#A3262A'}">${v.sonuc === 'ok' ? 'SONUÇ: UYGUN' : 'SONUÇ: UYGUN DEĞİL'}</div></div>
-        <div class="foot">Test, ürün ${f(pt(v), 0)} bar basınçta ${f(v.sure || 0, 0)} dakika bekletilerek yapılmıştır.<br><br>Testi yapan: ${esc(v.eden || '................')} &nbsp;&nbsp; İmza: ................</div></div>`;
+        <div class="foot">Test, ürün ${f(pt(v), 0)} bar basınçta ${f(v.sure || 0, 0)} dakika bekletilerek atölyede yapılmıştır. Bu rapor, yapılan testin kaydıdır; değerler testi yapan tarafından girilmiştir.<br><br>Testi yapan: ${esc(v.eden || '................')} &nbsp;&nbsp; İmza: ................</div></div>`;
     }
     function label(v) { return `<div style="display:inline-flex;gap:6px;align-items:center;border:1px dashed #999;padding:4px;width:68mm;height:34mm;box-sizing:border-box;font:9pt/1.2 sans-serif;color:#000;background:#fff;margin:2mm;vertical-align:top"><div style="width:30mm;height:30mm;flex:none">${qrSVG(qrText(v))}</div><div><b>${esc(v.tanim)}</b><br>No: ${esc(v.isno || '-')}<br>${f(pt(v), 0)} bar test · ${v.sonuc === 'ok' ? 'UYGUN' : 'RED'}<br>${new Date(v.tarih).toLocaleDateString('tr-TR')}${gEnd(v) ? '<br>Garanti: ' + gEnd(v) : ''}</div></div>`; }
-    function draw() { if (!cur) return; $('#hyOut').innerHTML = `<div style="margin-top:12px">${doc(cur)}</div><h3>Etiket önizleme</h3>${label(cur)}`; }
+    function draw() { if (!cur) return; const mi = missing(cur); if (mi.length) { $('#hyOut').innerHTML = warnP('Rapor için doldurun: ' + mi.join(', ') + '.'); return; } $('#hyOut').innerHTML = `<div style="margin-top:12px">${doc(cur)}</div><h3>Etiket önizleme</h3>${label(cur)}`; }
     F.bind(root);
-    $('#hyP').onclick = () => cur && H().printDoc(doc(cur));
+    const ready = () => { if (!cur) return false; const mi = missing(cur); if (mi.length) { H().toast('Önce doldurun: ' + mi.join(', ')); return false; } return true; };
+    $('#hyP').onclick = () => ready() && H().printDoc(doc(cur));
     $('#hyB').onclick = async () => {
-      if (!cur) return; const db = H().store.get('hyd.bakim', { mak: [] });
+      if (!ready()) return; const db = H().store.get('hyd.bakim', { mak: [] });
       const ad = await H().askText('Hangi makineye eklensin? (Bakım kaydındaki adı; yoksa yeni açılır)', (db.mak[0] && db.mak[0].ad) || cur.musteri || ''); if (!ad) return;
       let m = db.mak.find(x => x.ad.toLocaleLowerCase('tr') === ad.toLocaleLowerCase('tr'));
       if (!m) { m = { ad, musteri: cur.musteri || '', seri: '', saat: 0, yagSaat: 1000, filSaat: 500, kayit: [], yag: [] }; db.mak.unshift(m); }
@@ -563,7 +566,7 @@
       (m.kayit = m.kayit || []).unshift({ tarih: cur.tarih, is: `${cur.tanim} — ${f(pt(cur), 0)} bar test ${cur.sonuc === 'ok' ? 'uygun' : 'UYGUN DEĞİL'}${cur.isno ? ' (' + cur.isno + ')' : ''}`, saat: m.saat, garanti: cur.garanti || 0, tutar: 0, yagSaat: last.yagSaat || 0, filSaat: last.filSaat || 0 });
       H().store.set('hyd.bakim', db); H().toast('Bakım kaydına eklendi: ' + m.ad);
     };
-    $('#hyL').onclick = async () => { if (!cur) return; const n = await H().askNum('Kaç etiket basılsın?', 1); if (!(n > 0)) return; H().printDoc(`<div>${Array.from({ length: Math.min(60, n) }, () => label(cur)).join('')}</div>`); };
+    $('#hyL').onclick = async () => { if (!ready()) return; const n = await H().askNum('Kaç etiket basılsın?', 1); if (!(n > 0)) return; H().printDoc(`<div>${Array.from({ length: Math.min(60, n) }, () => label(cur)).join('')}</div>`); };
   });
 
   /* ---------- 13. Bakım kaydı ve garanti ---------- */
@@ -685,6 +688,35 @@
       '<p class="note">Sebepler genelde en sık görülenden en aza doğru sıralıdır. Basınç ve debi ölçmeden parça değiştirmeyin; manometre ve debimetre en ucuz teşhis aracıdır.</p>';
   });
 
+  /* ---------- Terimler sözlüğü ---------- */
+  const TERMS = [
+    ['Silindir', 'Yağ basıncıyla ileri-geri hareket eden "piston"lu kol. Kepçe kolunu, damperi, presi hareket ettirir.'],
+    ['Piston çapı (Ø D)', 'Silindir borusunun iç çapı. Büyüdükçe silindir daha çok yük kaldırır.'],
+    ['Mil (Ø d)', 'Silindirden dışarı çıkan parlak (krom kaplı) çubuk.'],
+    ['Strok (kurs)', 'Milin dışarı çıkabildiği mesafe. 500 mm strok: mil 50 cm uzar.'],
+    ['Kapalı boy', 'Mil tamamen içerideyken iki bağlantı gözü arasındaki mesafe.'],
+    ['Basınç (bar)', 'Sistemdeki yağın gücü. İş makinelerinde genelde 200–350 bar.'],
+    ['Debi (l/dk)', 'Pompanın dakikada bastığı yağ miktarı. Debi arttıkça silindir hızlanır.'],
+    ['İtme / çekme kuvveti', 'Silindirin dışarı açılırken (itme) ve içeri kapanırken (çekme) uyguladığı kuvvet. Çekme daha küçüktür çünkü milin kapladığı alan düşer.'],
+    ['Burkulma', 'Uzun ve ince milin yük altında yana eğilip bükülmesi. Program mil çapının yeterli olup olmadığını kontrol eder.'],
+    ['Honlama', 'Silindir borusunun içini parlatıp düzeltme işlemi (revizyonda yapılır).'],
+    ['Keçe seti', 'Yağ kaçağını önleyen lastik/plastik contalar. Revizyonda değişir.'],
+    ['Revizyon', 'Eskiyen silindirin sökülüp tamir edilmesi: honlama, krom, keçe değişimi, test.'],
+    ['Test basıncı', 'İmalat/tamirden sonra ürünün denendiği basınç. Silindirde çalışma basıncının 1,5 katı, hortumda 2 katı.'],
+    ['Hortum DN', 'Hortumun iç çapı. DN12 ≈ 12,7 mm.'],
+    ['1SN / 2SN / 4SP / 4SH', 'Hortumun içindeki çelik örgü/tel kat sayısı. Sayı büyüdükçe dayandığı basınç artar.'],
+    ['Bükülme yarıçapı', 'Hortumun kırılmadan kıvrılabileceği en dar yay.'],
+    ['Pompa (cc/dev)', 'Pompanın bir turda bastığı yağ. Devirle çarpılınca debiyi verir.'],
+    ['Valf (NG / CETOP)', 'Yağın yönünü değiştiren parça (kolu açıp kapatan). NG6, NG10… boyutu debiye göre seçilir.'],
+    ['Akümülatör', 'İçinde azot olan basınçlı yağ deposu; ani ihtiyaçta yağ verir.'],
+    ['Pim / burç', 'Kova ve kolları birbirine bağlayan mil (pim) ve onun döndüğü yatak (burç).'],
+    ['ISO 4406 (19/17/14)', 'Yağın ne kadar kirli olduğunu gösteren kod. Sayılar küçüldükçe yağ temizdir.'],
+    ['Devrilme yükü', 'Makinenin öne devrilmeye başladığı yük. Güvenli yük bunun %75\'i (ekskavatör) ya da %50\'si (loder) alınır.'],
+  ];
+  tool('terimler', 'Rehber', 'Terimler sözlüğü', 'Strok, debi, burkulma, DN… kısa ve sade açıklamalar', root => {
+    root.innerHTML = '<p class="note">Hidrolik ekranlarındaki kelimelerin sade açıklamaları.</p>' + table(['Terim', 'Anlamı'], TERMS.map(([a, b]) => [`<b>${esc(a)}</b>`, esc(b)]));
+  });
+
   /* ---------- 18. Kaldırma kapasitesi (ayrı modülde) ---------- */
   tool('kaldirma', 'Hesap', 'Kaldırma kapasitesi', 'Ekskavatör, beko, loder, sepetli platform: devrilme, hidrolik sınır, kova ağırlığı etkisi, mekanizma hesabı', root => {
     if (window.TornalyKaldirma) window.TornalyKaldirma.render(root, H); else root.innerHTML = warnP('Kaldırma modülü yüklenemedi.');
@@ -722,20 +754,31 @@
   /* ================= Menü ve gezinme ================= */
   let rootEl = null;
   const GROUPS = [['Hesap', 'Hesaplar'], ['Teklif', 'Teklifler'], ['Belge', 'Belgeler'], ['Kayıt', 'Kayıtlar'], ['Rehber', 'Rehberler'], ['Ayar', 'Ayarlar']];
-  function menu() {
+  let curTool = null;
+  function menu(fromPop) {
+    curTool = null; if (!fromPop) H().navPush({ v: 'hidrolik' });
     const db = H().store.get('hyd.bakim', { mak: [] });
     const dueN = db.mak.filter(m => (m.kayit || []).length && ((m.yagSaat && m.saat - ((m.kayit[0] || {}).yagSaat || 0) >= m.yagSaat) || (m.filSaat && m.saat - ((m.kayit[0] || {}).filSaat || 0) >= m.filSaat))).length;
-    rootEl.innerHTML = `<h2>Hidrolik</h2>${dueN ? warnP(`⚠ ${dueN} makinede bakım zamanı geldi (Kayıtlar → Bakım kaydı).`) : ''}` + GROUPS.map(([g, gt]) => {
+    const help = `<details class="help" style="margin:0 0 12px"><summary>Nasıl kullanılır?</summary><ol>
+      <li><b>Silindir hesabı:</b> Yükü (ton) ve stroku (milin uzayacağı mesafe) yazın; çap, mil, basınç ve maliyet kendiliğinden hesaplanır. Alttaki "Sonraki adım" düğmeleriyle hortum, pompa, pim, test raporu ve teklife geçin.</li>
+      <li><b>Teklifler:</b> Silindir revizyonu, hortum imalatı ve kova imalatı için iş kalemlerini girin; teklif PDF olarak hazırlanır, Teklif sekmesinden gönderilir.</li>
+      <li><b>Test raporu:</b> Testi atölyede yaptıktan sonra gördüğünüz değerleri yazın; rapor (PDF) ve ürüne yapıştırılacak QR etiket hazırlanır. Program test yapmaz.</li>
+      <li><b>Kaldırma kapasitesi:</b> "Hızlı hesap" ile tek konum, "Mekanizma" ile makine resmi üzerinde kolu oynatarak güvenli yükü görün.</li>
+      <li><b>Bakım kaydı:</b> Makineleri kaydedin; yağ, filtre ve garanti zamanı gelince uyarı çıkar.</li>
+      <li>Anlamadığınız kelimeler için <b>Rehberler → Terimler sözlüğü</b>. Fiyatlarınızı bir kez <b>Ayarlar → Hidrolik fiyatları</b>'na girin.</li>
+      <li>Telefonun geri tuşu bir önceki ekrana döner. Sesli: "silindir 25 ton strok 800".</li></ol></details>`;
+    rootEl.innerHTML = `<h2>Hidrolik</h2>${help}${dueN ? warnP(`⚠ ${dueN} makinede bakım zamanı geldi (Kayıtlar → Bakım kaydı).`) : ''}` + GROUPS.map(([g, gt]) => {
       const ts = TOOLS.filter(t => t.grp === g); if (!ts.length) return '';
       return `<h3>${gt}</h3><div class="hytools">${ts.map(t => `<button class="hytool" data-tool="${t.id}"><b>${esc(t.title)}</b><small>${esc(t.desc)}</small></button>`).join('')}</div>`;
     }).join('') + '<p class="note">Tüm hesaplar ön hesaptır; tasarım, üretim ve güvenlik kararlarında ilgili standartlar, üretici katalogları ve yetkili muayene esastır.</p>';
     rootEl.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => openTool(b.dataset.tool));
   }
-  function openTool(id, pre) {
+  function openTool(id, pre, fromPop) {
     const t = TOOLS.find(x => x.id === id); if (!t) return menu();
+    curTool = id; if (!fromPop) H().navPush({ v: 'hidrolik', tool: id });
     rootEl.innerHTML = `<div class="row" style="margin:4px 0 8px"><button class="btn ghost" id="hyBack">← Hidrolik araçları</button></div><h2 style="margin-top:4px">${esc(t.title)}</h2><div id="hyTool"></div>`;
     $('#hyBack').onclick = () => { menu(); window.scrollTo(0, 0); };
-    if (pre && pre.vals) H().store.set('hyd.in.' + id, Object.assign(saved(id), pre.vals));
+    if (pre && pre.vals) H().store.set('hyd.in.' + id, Object.assign(saved(id), id === 'test' ? { sonuc: '', sure: '', dus: '', isno: '' } : {}, pre.vals));
     const c = ctx();
     if (c && LINKS[id] && !(pre && pre.vals)) {
       rootEl.querySelector('#hyTool').insertAdjacentHTML('beforebegin', `<div class="note" style="display:flex;gap:8px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-s);padding:8px 10px;margin:0 0 8px"><span>Son silindir: <b>Ø${c.D}/Ø${c.d} × ${f(c.s, 0)}</b>, ${f(c.p, 0)} bar${c.Q ? ', ' + f(c.Q, 0) + ' l/dk' : ''}</span><button class="btn" id="hyCtx" style="flex:none">Değerleri kullan</button></div>`);
@@ -744,7 +787,7 @@
     try { t.render($('#hyTool'), pre); } catch (e) { $('#hyTool').innerHTML = warnP('Bu araç açılamadı: ' + esc(e.message)); console.error(e); }
     window.scrollTo(0, 0);
   }
-  function mount(el) { rootEl = el; menu(); }
+  function mount(el) { rootEl = el; menu(true); }
   // Sesli komut ve dış çağrılar için
-  window.TornalyHydraulic = { mount, openTool, menu, tools: () => TOOLS.map(t => [t.id, t.title]), HOSES, BORES, RODS, buckling, dpLoss, vTarget, prices };
+  window.TornalyHydraulic = { mount, openTool, menu, current: () => curTool, tools: () => TOOLS.map(t => [t.id, t.title]), HOSES, BORES, RODS, buckling, dpLoss, vTarget, prices };
 })();

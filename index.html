@@ -235,6 +235,7 @@ details summary{cursor:pointer;font-weight:600}
     <p>Öneri ve hata bildirimi için Ayarlar'daki <b>Geri bildirim gönder</b> düğmesini kullanın.</p>
     <p><b>3B model:</b> SolidWorks, Fusion, Inventor gibi programlarda parçayı "Farklı kaydet → STEP" (ya da STL) ile kaydedip <b>Çizim seç</b>'ten açın. Hacim, ağırlık, ölçüler ve delik sayısı modelden hesaplanır.</p>
     <p>DWG dosyasını AutoCAD'de "Farklı Kaydet → DXF" ile kaydedin. Bloklu çizimlerde önce PATLAT komutunu kullanın. Ölçü, eksen ve yazı katmanları otomatik kapatılır.</p>
+    <p><b>Hidrolik araçları</b> için alttaki <b>Hidrolik</b> sekmesine geçin; orada ayrı bir "Nasıl kullanılır?" bölümü var.</p>
     <p><b>Hidrolik</b> sekmesi (sesli: "silindir 25 ton strok 800", "silindir 25 ton strok 800 basınç 250 süre 10 saniye"): silindir tasarımı (çap, mil, burkulma, et kalınlığı, 3B, maliyet), hortum seçimi, pompa/motor, pim-burç, tank/akümülatör, kaldırma kapasitesi (ekskavatör, beko, loder, sepetli platform), revizyon, hortum ve kova teklifleri, basınç testi raporu, QR etiket, bakım ve garanti kaydı, rehberler ve birim çevirici.</p>
     <p>Kayıtlarınız yalnızca bu cihazda tutulur; Ayarlar'dan yedek alabilirsiniz.</p>
   </details>
@@ -946,13 +947,30 @@ function toast(t) { const e = $('#toast'); e.textContent = t; e.classList.add('o
 /* ---------- Sekmeler ---------- */
 document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => { if (b.dataset.v === 'hidrolik' && hydMounted && $('#v-hidrolik').classList.contains('on')) TornalyHydraulic.menu(); showView(b.dataset.v); });
 let hydMounted = false;
-function showView(v) {
+/* Geri tuşu: her ekran değişimi tarayıcı geçmişine yazılır; telefonun geri tuşu bir önceki ekrana döner */
+let navT = 0;
+function navPush(st) {
+  try {
+    const cur = history.state || {};
+    if (cur.v === st.v && cur.tool === st.tool) return;
+    if (Date.now() - navT < 80) history.replaceState(st, ''); else history.pushState(st, '');
+    navT = Date.now();
+  } catch (e) {}
+}
+window.addEventListener('popstate', e => {
+  const st = e.state || { v: 'hesap' };
+  showView(st.v, true);
+  if (st.v === 'hidrolik' && window.TornalyHydraulic) { if (st.tool) TornalyHydraulic.openTool(st.tool, null, true); else TornalyHydraulic.menu(true); }
+});
+try { history.replaceState({ v: 'hesap' }, ''); } catch (e) {}
+function showView(v, fromPop) {
   document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === v));
   document.querySelectorAll('section.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
   if (v === 'teklif') renderQuote();
   if (v === 'gecmis') renderHistory();
   if (v === 'hesap') viewer.resize();
   if (v === 'hidrolik' && window.TornalyHydraulic && !hydMounted) { hydMounted = true; TornalyHydraulic.mount($('#hydRoot')); }
+  if (!fromPop) navPush({ v, tool: v === 'hidrolik' && window.TornalyHydraulic ? TornalyHydraulic.current() || undefined : undefined });
   window.scrollTo(0, 0);
 }
 
@@ -2170,7 +2188,7 @@ function openTorna(name, steps) {
   toast(name + ' torna hesabına aktarıldı');
 }
 window.TornalyHost = {
-  fmt, tl, esc, toast, ask, showView, openQuote, printDoc, toTL, openTorna,
+  fmt, tl, esc, toast, ask, showView, openQuote, printDoc, toTL, openTorna, navPush,
   askNum: async (m, d) => { const v = await ask(m, { v: d, num: true }); return v === null ? NaN : parseFloat(String(v).replace(',', '.')); },
   askText: async (m, d) => { const v = await ask(m, { v: d }); return v === null ? '' : String(v).trim(); },
   store, prof: () => prof
