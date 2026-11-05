@@ -253,25 +253,33 @@
     return g.out;
   }
 
-  /* ================= 2B çizimler (SVG) ================= */
-  function pimSVG(o) {
-    const { d, b, a, n, okP, okT, okB } = o, gap = 4, tot = n === 2 ? b + 2 * a + 2 * gap : b + a + gap, W = 340, k = Math.min(250 / tot, 120 / (d * 2.4)), cx = W / 2, cy = 75;
-    const X = mm => cx + (mm - tot / 2) * k, col = g => g ? '#2B6683' : '#A3262A';
-    const eyeH = d * 2.2 * k, earH = d * 2.0 * k, pinY = cy - d * k / 2;
-    let s = `<svg viewBox="0 0 ${W} 170" style="width:100%;max-width:420px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-s)">`;
-    let x0 = 0;
-    const ear = x => { s += `<rect x="${X(x)}" y="${cy - earH / 2}" width="${a * k}" height="${earH}" fill="#8a99a3" stroke="#1c2830"/>`; };
-    if (n === 2) { ear(0); x0 = a + gap; } else x0 = 0;
-    s += `<rect x="${X(x0)}" y="${cy - eyeH / 2}" width="${b * k}" height="${eyeH}" fill="#f2b705" stroke="#1c2830"/>`;
-    s += `<rect x="${X(x0)}" y="${cy - d * k * 0.72}" width="${b * k}" height="${d * k * 1.44}" fill="${col(okP)}" opacity=".9" stroke="#1c2830"/><text x="${X(x0) + 4}" y="${cy - d * k * 0.72 + 10}" font-size="9" fill="#fff">burç</text>`;
-    ear(x0 + b + gap);
-    s += `<rect x="${X(0) - 8}" y="${pinY}" width="${tot * k + 16}" height="${d * k}" rx="4" fill="${col(okT && okB)}" stroke="#1c2830"/>`;
-    s += `<path d="M${X(x0 + b / 2)} ${cy - eyeH / 2 - 26} v18 m-6 -7 l6 7 l6 -7" stroke="#1c2830" stroke-width="2.2" fill="none"/><text x="${X(x0 + b / 2)}" y="${cy - eyeH / 2 - 30}" font-size="11" text-anchor="middle" fill="var(--ink)">yük</text>`;
-    s += `<text x="${X(x0 + b / 2)}" y="${cy + eyeH / 2 + 16}" font-size="11" text-anchor="middle" fill="var(--ink)">burç ${f(b, 0)} mm</text>`;
-    s += `<text x="${X(tot) + 12}" y="${cy + 4}" font-size="11" fill="var(--ink)">Ø${f(d, 0)} pim</text>`;
-    s += `<text x="8" y="160" font-size="10" fill="var(--muted)"><tspan fill="${col(okP)}">■</tspan> burç basıncı  <tspan fill="${col(okT && okB)}">■</tspan> pim (kesme, eğilme)  ■ mavi: uygun, kırmızı: yetersiz</text>`;
-    return s + '</svg>';
+  // Pim bağlantısı: sabit çatal (iki yan kulak), hareketli göz, burç halkası, pim
+  function pim3D(host, g) {
+    view3D(host, (grp, M) => {
+      const { d, b, a, n, okP, okT, okB } = g, gap = Math.max(3, d * 0.2), R = d * 1.25, ringR = d / 2 + Math.max(4, d * 0.12);
+      const blue = new THREE.MeshStandardMaterial({ color: 0x2b6683, metalness: 0.3, roughness: 0.45 }), red = new THREE.MeshStandardMaterial({ color: 0xa3262a, metalness: 0.3, roughness: 0.45 });
+      const plate = (w, h, t, hole, mat) => { const sh = new THREE.Shape(); sh.moveTo(-w / 2, -h); sh.lineTo(w / 2, -h); sh.lineTo(w / 2, 0); sh.absarc(0, 0, w / 2, 0, PI, false); sh.lineTo(-w / 2, -h);
+        const hp = new THREE.Path(); hp.absarc(0, 0, hole, 0, PI * 2, true); sh.holes.push(hp); return new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: t, bevelEnabled: false, curveSegments: 32 }), mat); };
+      const tot = n === 2 ? b + 2 * a + 2 * gap : b + a + gap, z0 = -tot / 2;
+      // sabit çatal: yan kulaklar + taban (aşağı doğru)
+      const ears = n === 2 ? [z0, z0 + a + gap + b + gap] : [z0 + b + gap];
+      const gT = new THREE.MeshStandardMaterial({ color: 0x8a99a3, metalness: 0.3, roughness: 0.5, transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide }), yT = new THREE.MeshStandardMaterial({ color: 0xf2b705, metalness: 0.2, roughness: 0.6, transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide });
+      ears.forEach(z => { const e = plate(2 * R, R * 2.2, a, d / 2 + 0.5, gT); e.position.z = z; grp.add(e); });
+      const base = new THREE.Mesh(new THREE.BoxGeometry(2 * R, R * 0.5, tot), gT); base.position.set(0, -R * 2.2 - R * 0.25, 0); grp.add(base);
+      // hareketli göz (yukarı doğru kol)
+      const ez = n === 2 ? z0 + a + gap : z0, eye = plate(2 * R, R * 2.6, b, ringR, yT); eye.rotation.z = PI; eye.position.z = ez + b; eye.rotation.y = PI; grp.add(eye);
+      // burç halkası
+      const bush = new THREE.Mesh(new THREE.CylinderGeometry(ringR, ringR, b + gap * 1.6, 40, 1, false), okP ? blue : red); bush.rotation.x = PI / 2; bush.position.z = ez + b / 2; grp.add(bush);
+      // pim (başlı) + emniyet
+      const pin = new THREE.Mesh(new THREE.CylinderGeometry(d / 2, d / 2, tot + d * 1.6, 40), okT && okB ? blue : red); pin.rotation.x = PI / 2; grp.add(pin);
+      const head = new THREE.Mesh(new THREE.CylinderGeometry(d * 0.75, d * 0.75, d * 0.25, 40), okT && okB ? blue : red); head.rotation.x = PI / 2; head.position.z = tot / 2 + d * 0.8; grp.add(head);
+      // yük oku (göz üzerinde, aşağı)
+      const arrow = new THREE.ArrowHelper(new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, R * 2.6 + R * 2.2, ez + b / 2), R * 1.8, 0xa3262a, R * 0.6, R * 0.4); grp.add(arrow);
+      return { view: 'pim', th: 0.95, ph: 1.2 };
+    }, 230);
   }
+
+  /* ================= 2B çizimler (SVG) ================= */
   const RAKOR_P = [
     ['BSP 60° koni', 'BSP', 'M10 40 l20 0 l12 -12 l18 0'],
     ['BSP düz yüz (conta ile)', 'BSP', 'M10 40 l50 0 M60 28 l0 24'],
@@ -510,7 +518,14 @@
       const tA = 0.577 * Re / S, sA = Re / S;
       const dP = Fn / (v.pz * v.b), dT = Math.sqrt(Fn / (n * PI / 4 * tA)), dB = Math.cbrt(32 * M / (PI * sA));
       const okP = p <= v.pz, okT = tau <= tA, okB = sb <= sA, dmin = Math.max(dP, dT, dB);
-      $('#hySvg').innerHTML = pimSVG({ d: v.d, b: v.b, a, n, okP, okT, okB });
+      pim3D($('#hy3d'), { d: v.d, b: v.b, a, n, okP, okT, okB });
+      const C = ok_ => `<b style="color:${ok_ ? 'var(--steel)' : 'var(--err)'}">${ok_ ? 'mavi = yeterli' : 'kırmızı = yetersiz'}</b>`;
+      $('#hyLeg').innerHTML = `<div style="font-size:.88rem;line-height:1.45;margin:6px 0 10px">
+        <b>Resimde ne var?</b> Kova ya da silindiri bağlayan pimli bağlantı. Parmağınızla çevirip bakabilirsiniz.<br>
+        ▪ <b>Gri çatal:</b> sabit parça (makineye bağlı yan kulaklar)<br>
+        ▪ <b>Sarı göz:</b> hareket eden parça (kova kulağı, silindir ucu); kırmızı ok yükün bastığı yer<br>
+        ▪ <b>Halka (burç):</b> sarı gözün içindeki yatak; pim bunun içinde döner — ${C(okP)}<br>
+        ▪ <b>Çubuk (pim):</b> parçaları birbirine bağlayan mil — ${C(okT && okB)}</div>`;
       const fixes = [];
       if (!okP) fixes.push([false, `Burç zorlanıyor: burç boyunu en az ${Math.ceil(Fn / (v.pz * v.d))} mm yapın ya da pimi Ø${Math.ceil(dP)} mm'ye çıkarın`]);
       if (!okT) fixes.push([false, `Pim kesilmeye dayanmaz: en az Ø${Math.ceil(dT)} mm pim gerekir`]);
@@ -523,7 +538,7 @@
         ['Gereken en küçük pim çapı', `<b>Ø${f(Math.max(dP, dT, dB), 1)} mm</b> (basınç ${f(dP, 0)} · kesme ${f(dT, 0)} · eğilme ${f(dB, 0)})`],
       ]) + '<p class="note">Darbe ve titreşimli çalışmada (kırıcı, kazı) emniyet katsayısını 2,5–3 alın. Burç boyu artırmak yüzey basıncını düşürür ve aşınmayı yavaşlatır.</p>');
     });
-    root.innerHTML = '<div id="hySvg" style="margin-bottom:8px"></div>' + F.html + '<div id="hyOut"></div>'; F.bind(root);
+    root.innerHTML = '<div id="hy3d"></div><div id="hyLeg"></div>' + F.html + '<div id="hyOut"></div>'; F.bind(root);
   });
 
   /* ---------- 6. Tank, akümülatör, soğutma ---------- */
