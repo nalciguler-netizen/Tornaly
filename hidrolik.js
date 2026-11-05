@@ -228,6 +228,42 @@
       return { view: 'hose', th: 0, ph: 1.5 };
     });
   }
+  // Revizyon: silindir, yapılacak işler renkle (boru honlama, mil, keçeler)
+  function rev3D(host, g) {
+    view3D(host, (grp, M) => {
+      const { D, d, s, hon, mil, kece } = g, OD = D * 1.18, Lt = s + 0.6 * D + 50, ext = s * 0.45, eye = Math.max(12, d * 0.45);
+      const C = (c, o) => new THREE.MeshStandardMaterial(Object.assign({ color: c, metalness: 0.3, roughness: 0.45, side: THREE.DoubleSide }, o || {}));
+      const blue = 0x2b6683, red = 0xa3262a;
+      grp.add(lathe([[D / 2, 0], [OD / 2, 0], [OD / 2, Lt], [D / 2, Lt]], C(hon ? blue : 0xf2b705, { transparent: true, opacity: 0.35, depthWrite: false }), 64));
+      grp.add(lathe([[0, -0.25 * D], [OD / 2, -0.25 * D], [OD / 2, 0], [0, 0]], M.steel, 64));
+      const gl = lathe([[d / 2, Lt], [OD / 2 * 0.97, Lt], [OD / 2 * 0.97, Lt + 0.35 * D], [d / 2, Lt + 0.35 * D]], M.steel, 64); grp.add(gl);
+      const py = Lt - ext - 0.3 * D; // piston konumu
+      grp.add(lathe([[d / 2, py], [D / 2 * 0.99, py], [D / 2 * 0.99, py + 0.3 * D], [d / 2, py + 0.3 * D]], M.steel, 64));
+      grp.add(lathe([[0, py], [d / 2, py], [d / 2, Lt + 0.35 * D + ext], [0, Lt + 0.35 * D + ext]], mil === 'yeni' ? C(red) : mil === 'krom' ? C(blue) : M.chrome, 64));
+      const ring = (r, y) => { const t = new THREE.Mesh(new THREE.TorusGeometry(r, Math.max(3, D * 0.07), 12, 48), kece ? C(red) : M.dark); t.rotation.x = PI / 2; t.position.y = y; grp.add(t); };
+      ring(D / 2 * 0.97, py + 0.15 * D); ring(d / 2 * 1.04, Lt + 0.1 * D); ring(d / 2 * 1.04, Lt + 0.3 * D);
+      const eyeG = (y, w) => { const m = new THREE.Mesh(new THREE.TorusGeometry(eye * 0.75, eye * 0.45, 16, 40), M.steel); m.position.set(0, y, 0); m.scale.set(1, 1, w / (eye * 0.9)); return m; };
+      grp.add(eyeG(-0.25 * D - eye * 0.8, OD * 0.6)); grp.add(eyeG(Lt + 0.35 * D + ext + eye * 0.8, d * 0.9));
+      grp.rotation.z = -PI / 2;
+      return { view: 'rev', th: 0.5, ph: 1.25, fit: 0.8 };
+    });
+  }
+  // Yön kontrol valfi (CETOP), seçilen boyutun yaklaşık ölçüleriyle
+  const VDIM = { 'NG6': [206, 46, 70, 50], 'NG10': [245, 70, 90, 75], 'NG16': [320, 100, 120, 110], 'NG25': [380, 110, 145, 130], 'NG32': [460, 140, 175, 160] };
+  function valve3D(host, ng) {
+    const [L, W, Hh, B] = VDIM[ng] || VDIM.NG10;
+    view3D(host, (grp, M) => {
+      const body = new THREE.Mesh(new THREE.BoxGeometry(B, Hh * 0.75, W), new THREE.MeshStandardMaterial({ color: 0x3f6b84, metalness: 0.4, roughness: 0.45 })); body.position.y = Hh * 0.375; grp.add(body);
+      const plate = new THREE.Mesh(new THREE.BoxGeometry(B * 1.25, Hh * 0.18, W * 1.3), M.steel); plate.position.y = -Hh * 0.09; grp.add(plate);
+      [-1, 1].forEach(sg => {
+        const cl = (L - B) / 2, coil = new THREE.Mesh(new THREE.CylinderGeometry(W * 0.42, W * 0.42, cl * 0.8, 32), M.rubber); coil.rotation.z = PI / 2; coil.position.set(sg * (B / 2 + cl * 0.4), Hh * 0.4, 0); grp.add(coil);
+        const plug = new THREE.Mesh(new THREE.BoxGeometry(cl * 0.45, W * 0.55, W * 0.55), M.dark); plug.position.set(sg * (B / 2 + cl * 0.45), Hh * 0.4 + W * 0.55, 0); grp.add(plug);
+        const pin = new THREE.Mesh(new THREE.CylinderGeometry(W * 0.06, W * 0.06, cl * 0.25, 12), M.brass); pin.rotation.z = PI / 2; pin.position.set(sg * (B / 2 + cl * 0.9), Hh * 0.4, 0); grp.add(pin);
+      });
+      return { view: 'valf', th: 0.55, ph: 1.15 };
+    }, 200);
+    return { L, W, H: Hh };
+  }
   // Tank (yağ seviyesiyle) ve akümülatör
   function tank3D(host, g) {
     view3D(host, (grp, M) => {
@@ -377,9 +413,9 @@
       last = { D, d, OD, stroke, closed, p, Fp, Fc, lines, qty, mass: mT + mR + mP };
       const tOut = ok(Q) && stroke ? stroke / 1000 / vo : 0;
       const checks = [];
-      if (v.mode === 'yuk') checks.push([Fp >= Freq, Fp >= Freq ? `${f(v.yuk, 1)} ton yükü kaldırır (en fazla ${f(Fp / 9806.65, 1)} ton)` : `${f(v.yuk, 1)} ton yükü kaldıramaz`]);
+      if (v.mode === 'yuk') checks.push([Fp >= Freq, Fp >= Freq ? `${f(v.yuk, 1)} ton yükü kaldırır (en fazla ${f(Fp / 9806.65, 1)} ton)` : `${f(v.yuk, 1)} ton yükü kaldıramaz: basıncı artırın ya da daha büyük piston çapı seçin`]);
       checks.push([bk.ok, bk.ok ? `Mil yeterince kalın: ${f(stroke, 0)} mm açıkken yük altında bükülmez` : `Mil ince: bu strokta bükülebilir, ${dMinB ? 'en az Ø' + dMinB + ' mil gerekir' : 'stroku kısaltın ya da bağlantıyı değiştirin'}`]);
-      checks.push([sOk, sOk ? `Boru basınca dayanır (Ø${D} iç / Ø${OD} dış)` : 'Bu basınç bu boru malzemesi için çok yüksek']);
+      checks.push([sOk, sOk ? `Boru basınca dayanır (Ø${D} iç / Ø${OD} dış)` : 'Bu basınç bu boru malzemesi için çok yüksek: basıncı düşürüp daha büyük çap seçin ya da daha dayanıklı boru (akma dayanımı yüksek) kullanın']);
       checks.push([null, ok(Q) ? `Mil ${f(tOut, 1)} saniyede açılır · pompa ${f(Q, 0)} l/dk · elektrik motoru ${mot ? mot + ' kW' : 'çok büyük'}` : 'Hız için "İstenen çıkış süresi"ni girin']);
       out.innerHTML = card('Önerilen silindir', `Ø${D} / Ø${d} × ${f(stroke, 0)}`, [`Basınç <b>${f(p, 0)} bar</b>`, `Ağırlık <b>~${f(mT + mR + mP, 0)} kg</b>`, `Fiyat <b>${tl(cost * kFactor())}</b>`]) + chk(checks) +
         (opts.length ? `<p class="note" style="margin:6px 0 4px">Başka basınçla aynı yük için:</p><div class="row" style="gap:6px">${opts.filter(o => o[0] !== p).map(([pp, Dx, dx]) => `<button class="btn" data-pp="${pp}" style="padding:4px 10px">${pp} bar → Ø${Dx}/Ø${dx}</button>`).join('')}</div>` : '') +
@@ -563,7 +599,17 @@
         r.accTxt = `Akümülatör <b>${s ? s + ' litre' : 'çok büyük'}</b>, azot ${f(a0 - 1, 0)} bar`;
       }
       if (Vt) { const dm = tank3D($('#hy3d'), { V: Vt, acc: accS }); top = card('Tank', `${f(Vt, 0)} litre`, [`Ölçü ~<b>${f(dm.Lx, 0)} × ${f(dm.Wz, 0)} × ${f(dm.Hy, 0)} mm</b>`].concat(r.accTxt ? [r.accTxt] : [])) +
-        chk([[cool === 0, cool === 0 ? 'Tank yağı soğutmaya yeter, ayrıca soğutucu gerekmez' : `Yağ soğutucusu gerekli: yaklaşık ${f(cool, 1)} kW`]]); }
+        chk([[cool === 0, cool === 0 ? 'Tank yağı soğutmaya yeter, ayrıca soğutucu gerekmez' : `Yağ soğutucusu gerekli: yaklaşık ${f(cool, 1)} kW`]]);
+        if (cool > 0) { const dTx = ok(v.dT) ? v.dT : 30, Pl = ok(v.Pin) ? v.Pin * (v.kay || 25) / 100 : 0, Vno = Math.pow(Pl * 1000 / (12 * 0.065 * dTx), 1.5);
+          top += `<div style="background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--err);border-radius:var(--r-s);padding:10px 12px;margin:8px 0;font-size:.92rem;line-height:1.45">
+            <b>Neden?</b> Pompanın harcadığı gücün bir kısmı (burada ~${f(Pl, 1)} kW) ısıya dönüşür. Bu tank yüzeyinden ancak ${f(Pl - cool, 1)} kW atabilir; kalan ısı yağı sürekli ısıtır, yağ incelir, keçeler ve pompa çabuk bozulur.<br>
+            <b>Ne yapmalı?</b><ol style="margin:6px 0 0;padding-left:20px">
+            <li><b>Dönüş hattına hava soğutmalı yağ soğutucusu</b> (fanlı radyatör) takın. Soğutma gücü en az <b>${f(cool, 1)} kW</b> olmalı. Katalogdaki "kW/°C" değeri en az <b>${f(cool / dTx, 2)} kW/°C</b> olanı seçin (yağ, ortamdan ${f(dTx, 0)} °C sıcak çalışırken).</li>
+            <li>Soğutucu en az <b>${f(v.Q, 0)} l/dk</b> debiyi geçirebilmeli (silindir dönüşünde bu debi artar; bir boy büyük seçin).</li>
+            <li>Soğutucunun yanına <b>by-pass çek valf</b> (yaklaşık 3–5 bar) koyun: soğuk ve koyu yağda soğutucu patlamasın.</li>
+            <li>Fanı termostatla yaklaşık 50–55 °C'de çalıştırın.</li>
+            <li>Önce ısının kaynağına bakın: emniyet valfi sürekli açık çalışıyorsa ayarını ya da yükü düzeltin; ince hortum ve küçük valf de ısıtır.</li></ol>
+            <p class="note" style="margin:6px 0 0">Soğutucusuz çözüm için tank yaklaşık ${f(Vno, 0)} litre olmalıydı; bu pratik değildir, soğutucu daha ucuzdur.</p></div>`; } }
       out.innerHTML = r.length ? top + det(kv(r) + '<p class="note">Tank yüzey alanı A ≈ 0,065·V^(2/3) ve ısı geçişi ~12 W/m²K varsayımıyla kaba hesaptır. Akümülatör: Boyle–Mariotte, mutlak basınçlarla.</p>') : warnP('Değerleri girin.');
     });
     root.innerHTML = '<div id="hy3d" style="margin-bottom:6px"></div>' + F.html + '<div id="hyOut"></div>'; F.bind(root);
@@ -574,10 +620,11 @@
     const F = form('valf', [{ k: 'Q', l: 'Valften geçecek en yüksek debi', u: 'l/dk', d: 60, hint: 'Silindir dönüşünde tanka giden debi alan oranı kadar artar!' }], v => {
       const out = $('#hyOut'); if (!ok(v.Q)) { out.innerHTML = warnP('Debiyi girin.'); return; }
       const pick = VALVES.find(x => x[1] * 0.8 >= v.Q) || null;
-      out.innerHTML = (pick ? card('Önerilen valf', pick[0], [`${pick[1]} l/dk'ya kadar`]) : warnP('Debi çok yüksek: NG32 de yetmez, iki valf ya da kartuş valf düşünün.')) + det(table(['Boyut', 'Tipik en yüksek debi', 'Durum'], VALVES.map(([n, q]) => [n, `${q} l/dk`, q * 0.8 >= v.Q ? (pick && pick[0] === n ? '<b>Önerilen</b>' : 'Uygun') : '—'])) +
+      const dm = pick ? valve3D($('#hy3d'), pick[0].split(' ')[0]) : null;
+      out.innerHTML = (pick ? card('Önerilen valf', pick[0], [`${pick[1]} l/dk'ya kadar`, `Boyut ~<b>${dm.L} × ${dm.W} × ${dm.H} mm</b>`]) + `<p class="note" style="margin:6px 0">Resim: bağlantı plakası üstünde valf gövdesi (mavi), iki yanda elektrik bobinleri (siyah). Makinedeki valfi bu ölçülerle karşılaştırarak boyunu tanıyabilirsiniz.</p>` : warnP('Debi çok yüksek: NG32 de yetmez, iki valf ya da kartuş valf düşünün.')) + det(table(['Boyut', 'Tipik en yüksek debi', 'Durum'], VALVES.map(([n, q]) => [n, `${q} l/dk`, q * 0.8 >= v.Q ? (pick && pick[0] === n ? '<b>Önerilen</b>' : 'Uygun') : '—'])) +
         '<p class="note">Valfi tablo değerinin %80\'ine kadar yüklemek basınç kaybını ve ısınmayı düşük tutar. Değerler tipik katalog değerleridir; markaya göre değişir.</p>');
     });
-    root.innerHTML = F.html + '<div id="hyOut"></div>'; F.bind(root);
+    root.innerHTML = '<div id="hy3d" style="margin-bottom:6px"></div>' + F.html + '<div id="hyOut"></div>'; F.bind(root);
   });
 
   /* ---------- 8. Birim çevirici ---------- */
@@ -622,16 +669,19 @@
       if (v.test === '1') L.push(['Basınç testi', P('test')]);
       if (ok(v.nak)) L.push(['Nakliye / diğer', v.nak]);
       const c = L.reduce((a, l) => a + l[1], 0);
+      rev3D($('#hy3d'), { D: v.D, d: v.d, s: v.s, hon: v.hon === '1', mil: v.mil, kece: v.kece === '1' });
+      const jobs = [v.hon === '1' && '<b style="color:var(--steel)">mavi boru</b> = honlanacak', v.mil === 'krom' && '<b style="color:var(--steel)">mavi mil</b> = krom kaplanacak', v.mil === 'yeni' && '<b style="color:var(--err)">kırmızı mil</b> = yenisi takılacak', v.kece === '1' && '<b style="color:var(--err)">kırmızı halkalar</b> = keçeler değişecek'].filter(Boolean);
+      $('#hyLeg').innerHTML = `<p class="note" style="margin:4px 0 8px">Resim: müşterinin silindiri (boru saydam, içinde piston görünür). ${jobs.length ? jobs.join(' · ') : 'Yapılacak iş seçilmedi.'}</p>`;
       out.innerHTML = card('Revizyon fiyatı (1 adet)', tl(c * kFactor()), [`${L.length} iş kalemi`, `Garanti <b>${ok(v.garanti) ? v.garanti + ' ay' : 'yok'}</b>`]) +
         det(table(null, L.map(([n, x]) => [esc(n), tl(x)]).concat([['<b>Maliyet</b>', `<b>${tl(c)}</b>`], ['Gider + kâr ile birim fiyat', `<b>${tl(c * kFactor())}</b>`]])), 'Ayrıntılar: iş kalemleri ve maliyet');
       cur = { v, L };
     });
     let cur = null;
-    root.innerHTML = F.html + '<div id="hyOut"></div><div class="row" style="margin-top:10px"><button class="btn tape" id="hyQ">Teklif hazırla</button><button class="btn ghost" id="hyT">Test raporu + QR</button><button class="btn ghost" id="hyH">Hortum seç</button></div>' + templateBar('revizyon');
+    root.innerHTML = '<div id="hy3d"></div><div id="hyLeg"></div>' + F.html + '<div id="hyOut"></div><div class="row" style="margin-top:10px"><button class="btn tape" id="hyQ">Teklif hazırla</button><button class="btn ghost" id="hyT">Test raporu + QR</button><button class="btn ghost" id="hyH">Hortum seç</button></div>' + templateBar('revizyon');
     F.bind(root); bindTemplates(root, 'revizyon');
     $('#hyQ').onclick = () => { if (!cur) return; const v = cur.v;
       H().openQuote(serviceQuote({ title: 'Hidrolik silindir revizyonu', part: `${v.makine || 'Silindir'} Ø${v.D}/Ø${v.d} × ${f(v.s, 0)}`, qty: ok(v.adet) ? Math.round(v.adet) : 1,
-        meta: [['Silindir', `Ø${v.D} / Ø${v.d} × ${f(v.s, 0)} mm`], ['Garanti', ok(v.garanti) ? `${v.garanti} ay` : '-']], lines: cur.L })); };
+        meta: [['Silindir', `Ø${v.D} / Ø${v.d} × ${f(v.s, 0)} mm`], ['Garanti', ok(v.garanti) ? `${v.garanti} ay` : '-']], lines: cur.L, shot: snap3() })); };
     $('#hyT').onclick = () => { if (!cur) return; openTool('test', { vals: S_({ tanim: `${cur.v.makine || 'Silindir'} Ø${cur.v.D}/Ø${cur.v.d} × ${f(cur.v.s, 0)} revizyon`, garanti: cur.v.garanti, tip: '1.5', kece: cur.v.kece === '1' ? `Keçe seti Ø${cur.v.D}/Ø${cur.v.d} değişti` : '' }) }); };
     $('#hyH').onclick = () => openTool('hortum');
   });
