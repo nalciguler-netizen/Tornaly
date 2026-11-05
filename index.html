@@ -235,7 +235,7 @@ details summary{cursor:pointer;font-weight:600}
     <p>Öneri ve hata bildirimi için Ayarlar'daki <b>Geri bildirim gönder</b> düğmesini kullanın.</p>
     <p><b>3B model:</b> SolidWorks, Fusion, Inventor gibi programlarda parçayı "Farklı kaydet → STEP" (ya da STL) ile kaydedip <b>Çizim seç</b>'ten açın. Hacim, ağırlık, ölçüler ve delik sayısı modelden hesaplanır.</p>
     <p>DWG dosyasını AutoCAD'de "Farklı Kaydet → DXF" ile kaydedin. Bloklu çizimlerde önce PATLAT komutunu kullanın. Ölçü, eksen ve yazı katmanları otomatik kapatılır.</p>
-    <p><b>Hidrolik</b> sekmesi: silindir tasarımı (çap, mil, burkulma, et kalınlığı, 3B, maliyet), hortum seçimi, pompa/motor, pim-burç, tank/akümülatör, kaldırma kapasitesi (ekskavatör, beko, loder, sepetli platform), revizyon, hortum ve kova teklifleri, basınç testi raporu, QR etiket, bakım ve garanti kaydı, rehberler ve birim çevirici.</p>
+    <p><b>Hidrolik</b> sekmesi (sesli: "silindir 25 ton strok 800", "silindir 25 ton strok 800 basınç 250 süre 10 saniye"): silindir tasarımı (çap, mil, burkulma, et kalınlığı, 3B, maliyet), hortum seçimi, pompa/motor, pim-burç, tank/akümülatör, kaldırma kapasitesi (ekskavatör, beko, loder, sepetli platform), revizyon, hortum ve kova teklifleri, basınç testi raporu, QR etiket, bakım ve garanti kaydı, rehberler ve birim çevirici.</p>
     <p>Kayıtlarınız yalnızca bu cihazda tutulur; Ayarlar'dan yedek alabilirsiniz.</p>
   </details>
   <h2>Parça</h2>
@@ -1743,7 +1743,15 @@ function sesKomut(raw) {
     const r = sk.voice(t); if (r) return r;
   }
   // gezinme
-  if (/(^|\s)hidrolik/.test(t) && t.split(' ').length <= 3) { showView('hidrolik'); return 'Hidrolik açıldı'; }
+  if (/(^|\s)hidrolik/.test(t) && t.split(' ').length <= 3) { showView('hidrolik'); if (window.TornalyHydraulic) TornalyHydraulic.menu(); return 'Hidrolik açıldı'; }
+  if (/(^|\s)silindir/.test(t) && /\d/.test(t) && window.TornalyHydraulic) {
+    const g = re => { const m = re.exec(t); return m ? m[1] : undefined; }, vals = {};
+    const ton = g(/(\d+(?:\.\d+)?)\s*ton/), st = g(/strok\w*\s*(\d+(?:\.\d+)?)/) || g(/(\d+(?:\.\d+)?)\s*(?:mm\s*)?strok/), bar = g(/(?:basınç\w*\s*)(\d+(?:\.\d+)?)/) || g(/(\d+(?:\.\d+)?)\s*bar/), sn = g(/(\d+(?:\.\d+)?)\s*saniye/);
+    const cap = g(/(?:çap\w*|piston\w*)\s*(\d+(?:\.\d+)?)/);
+    if (ton) { vals.yuk = ton; vals.mode = 'yuk'; } else if (cap) { vals.D0 = cap; vals.mode = 'cap'; }
+    if (st) vals.strok = st; if (bar) vals.p = bar; if (sn) vals.tSure = sn;
+    if (Object.keys(vals).length) { showView('hidrolik'); TornalyHydraulic.openTool('silindir', { vals }); return 'Silindir: ' + [ton && ton + ' ton', cap && 'Ø' + cap, st && 'strok ' + st, bar && bar + ' bar', sn && sn + ' s'].filter(Boolean).join(', '); }
+  }
   const HV = [[/silindir (hesab|tasar)/, 'silindir'], [/hortum seç|hortum hesab/, 'hortum'], [/kaldırma kapasite/, 'kaldirma'], [/revizyon/, 'revizyon'], [/hortum imalat|hortum teklif/, 'hortumImalat'], [/kova (imalat|teklif)/, 'kova'], [/basınç test|test rapor/, 'test'], [/bakım kayd/, 'bakim'], [/birim çevir/, 'birim'], [/arıza/, 'ariza']];
   for (const [re, id] of HV) if (re.test(t) && window.TornalyHydraulic) { showView('hidrolik'); TornalyHydraulic.openTool(id); return 'Hidrolik: ' + id; }
   if (/teklif\s*(hazırla|oluştur|aç|göster)|(^|\s)teklife git/.test(t) || t === 'teklif') { showView('teklif'); return 'Teklif açıldı'; }
@@ -2154,8 +2162,15 @@ function openQuote(q) {
   quote = Object.assign(q, { ext: true, stamp: resStamp });
   showView('teklif');
 }
+function openTorna(name, steps) {
+  showView('hesap');
+  state.quick.shape = 'mil'; state.quick.mil.steps = steps.map(x => ({ d: x.d, di: x.di || 0, l: x.l }));
+  state.mat.torna = 'c45'; state.params.torna.mrr = (prof.materials.find(m => m.id === 'c45') || {}).mrr || state.params.torna.mrr;
+  setProc('torna', true); setSrc('quick'); setPartName(name);
+  toast(name + ' torna hesabına aktarıldı');
+}
 window.TornalyHost = {
-  fmt, tl, esc, toast, ask, showView, openQuote, printDoc, toTL,
+  fmt, tl, esc, toast, ask, showView, openQuote, printDoc, toTL, openTorna,
   askNum: async (m, d) => { const v = await ask(m, { v: d, num: true }); return v === null ? NaN : parseFloat(String(v).replace(',', '.')); },
   askText: async (m, d) => { const v = await ask(m, { v: d }); return v === null ? '' : String(v).trim(); },
   store, prof: () => prof

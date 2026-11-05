@@ -78,6 +78,17 @@
   const kv = rows => table(null, rows.map(([a, b]) => [esc(a), b]));
   const badge = (good, t) => `<b style="color:${good ? 'var(--steel)' : 'var(--err)'}">${good ? '✓' : '✗'} ${t}</b>`;
   const warnP = t => `<p class="note" style="color:var(--warn)">${t}</p>`;
+  // Araçlar arası bağlantı: son silindir (ctx) ve "Sonraki adım" düğmeleri
+  const ctx = () => H().store.get('hyd.ctx', null);
+  const nextBar = items => `<h3>Sonraki adım</h3><div class="row hynext">${items.map(([l], i) => `<button class="btn" data-nx="${i}">${l}</button>`).join('')}</div>`;
+  const bindNext = (root, items) => root.querySelectorAll('[data-nx]').forEach(b => b.onclick = () => items[+b.dataset.nx][1]());
+  const S_ = o => { const r = {}; for (const k in o) if (o[k] !== undefined && o[k] !== null && !(typeof o[k] === 'number' && !isFinite(o[k]))) r[k] = String(typeof o[k] === 'number' ? +o[k].toFixed(3) : o[k]); return r; };
+  const LINKS = {
+    hortum: c => ({ Q: c.Q, p: c.p, hat: 'basinc' }), hiz: c => ({ D: c.D, d: c.d, s: c.s, Q: c.Q }),
+    pompa: c => ({ p: c.p, V: c.Q ? Math.ceil(c.Q * 1000 / (1450 * 0.92)) : undefined, n: 1450 }),
+    pim: c => ({ F: Math.ceil(c.F / 1000) }), valf: c => ({ Q: c.Q ? Math.ceil(c.Q * c.phi) : undefined }), tank: c => ({ Q: c.Q }),
+    revizyon: c => ({ D: c.D, d: c.d, s: c.s }), test: c => ({ tanim: c.ad, pw: c.p, tip: '1.5' }),
+  };
 
   /* ================= Teklif üretme ================= */
   function serviceQuote({ title, part, meta, lines, qty = 1, mat = '-', shot = '' }) {
@@ -155,20 +166,22 @@
   tool('silindir', 'Hesap', 'Hidrolik silindir', 'Yük ve basınçtan çap, mil, burkulma, boru et kalınlığı, 3B ve maliyet', root => {
     const F = form('silindir', [
       { k: 'mode', l: 'Hesap şekli', opts: [['yuk', 'Yük ve basınç verildi → çap bul'], ['cap', 'Çap verildi → kuvvet bul']], d: 'yuk', wide: true },
-      { k: 'yuk', l: 'Kaldırılacak / itilecek yük', u: 'ton', d: 10 }, { k: 'p', l: 'Çalışma basıncı', u: 'bar', d: 200 },
+      { k: 'yuk', l: 'Kaldırılacak / itilecek yük', u: 'ton', d: 10 }, { k: 'strok', l: 'Strok', u: 'mm', d: 500 },
+      { k: 'yer', l: 'Kullanım yeri (basınç önerisi)', opts: [['250', 'İş makinesi, kepçe, vinç → 250 bar'], ['210', 'Kaldırma platformu, forklift → 210 bar'], ['200', 'Tarım makinesi, römork → 200 bar'], ['180', 'Damper → 180 bar'], ['160', 'Sanayi makinesi → 160 bar'], ['250p', 'Hidrolik pres → 250 bar']], d: '250', wide: true },
+      { k: 'p', l: 'Çalışma basıncı (0 = öneri)', u: 'bar', d: 0 }, { k: 'tSure', l: 'İstenen çıkış süresi (0 = debiden)', u: 's', d: 0 },
       { k: 'D0', l: 'Piston çapı (çap verildiyse)', u: 'mm', d: 100 }, { k: 'phi', l: 'Alan oranı (piston/halka)', opts: [['1.25', '1,25'], ['1.4', '1,4'], ['1.6', '1,6'], ['2', '2,0']], d: '1.6' },
-      { k: 'd0', l: 'Mil çapı (0 = otomatik)', u: 'mm', d: 0 }, { k: 'strok', l: 'Strok', u: 'mm', d: 500 },
+      { k: 'd0', l: 'Mil çapı (0 = otomatik)', u: 'mm', d: 0 },
       { k: 'kapali', l: 'Kapalı boy, göz-göz (0 = tahmini)', u: 'mm', d: 0 }, { k: 'eta', l: 'Mekanik verim', u: '%', d: 90 },
       { k: 'euler', l: 'Bağlantı (burkulma durumu)', opts: [['1', 'Göz – göz (iki uç mafsallı)'], ['0.7', 'Flanş – göz (bir uç ankastre)'], ['2', 'Bir uç ankastre, diğeri serbest'], ['0.5', 'İki uç ankastre']], d: '1', wide: true },
       { k: 'Sk', l: 'Burkulma emniyet katsayısı', u: '', d: 3.5 }, { k: 'Re', l: 'Boru akma dayanımı', u: 'MPa', d: 355 },
-      { k: 'St', l: 'Boru emniyet katsayısı', u: '', d: 2 }, { k: 'Q', l: 'Pompa debisi (hız için)', u: 'l/dk', d: 60 },
+      { k: 'St', l: 'Boru emniyet katsayısı', u: '', d: 2 }, { k: 'Q', l: 'Pompa debisi (süre 0 ise)', u: 'l/dk', d: 60 },
       { h: 'Maliyet' }, { k: 'adet', l: 'Adet', u: '', d: 1 }, { k: 'hIs', l: 'Talaşlı işleme (0 = tahmini)', u: 'saat', d: 0 },
       { k: 'hKa', l: 'Kaynak (0 = tahmini)', u: 'saat', d: 0 }, { k: 'hMo', l: 'Montaj + test (0 = tahmini)', u: 'saat', d: 0 },
     ], v => calc(v));
-    root.innerHTML = F.html + '<div id="hyOut"></div><div id="hy3d" style="margin-top:10px"></div><div class="row" style="margin-top:10px"><button class="btn tape" id="hyQ">Teklif hazırla</button><button class="btn ghost" id="hyT">Test raporu</button></div>';
+    root.innerHTML = '<div id="hy3d" style="margin-bottom:6px"></div><div id="hyHead"></div>' + F.html + '<div id="hyOut"></div><div id="hyNext"></div>';
     let last = null;
     function calc(v) {
-      const p = v.p, pM = p / 10, eta = (ok(v.eta) ? v.eta : 90) / 100, phi = num(v.phi) || 1.6, out = $('#hyOut');
+      const p = ok(v.p) ? v.p : parseFloat(v.yer) || 250, pM = p / 10, eta = (ok(v.eta) ? v.eta : 90) / 100, phi = num(v.phi) || 1.6, out = $('#hyOut');
       if (!ok(p)) { out.innerHTML = warnP('Basıncı girin.'); return; }
       let D, Freq = ok(v.yuk) ? v.yuk * 9806.65 : 0, Dreq = 0;
       if (v.mode === 'yuk') { if (!ok(Freq)) { out.innerHTML = warnP('Yükü girin.'); return; } Dreq = Math.sqrt(4 * Freq / (PI * pM * eta)); D = nextIn(BORES, Dreq); if (!D) { out.innerHTML = warnP('Gereken çap Ø400 mm\'yi aşıyor; basıncı artırın ya da birden fazla silindir kullanın.'); return; } }
@@ -183,7 +196,9 @@
       const Fload = v.mode === 'yuk' ? Freq : Fp;
       const bk = buckling(d, Lk, Fload, ok(v.Sk) ? v.Sk : 3.5);
       const dMinB = (() => { for (const r of RODS) { if (r >= D) break; if (buckling(r, Lk, Fload, ok(v.Sk) ? v.Sk : 3.5).ok) return r; } return null; })();
-      const Q = v.Q, vo = ok(Q) ? Q * 1e6 / 60 / A / 1000 : 0, vi = ok(Q) ? Q * 1e6 / 60 / Aa / 1000 : 0;
+      const Qt = ok(v.tSure) && stroke ? A * stroke / 1e6 / v.tSure * 60 : 0, Q = Qt || v.Q, vo = ok(Q) ? Q * 1e6 / 60 / A / 1000 : 0, vi = ok(Q) ? Q * 1e6 / 60 / Aa / 1000 : 0;
+      const Pkw = ok(Q) ? p * Q / 600 / 0.85 : 0, mot = MOTORS.find(x => x >= Pkw) || null;
+      const opts = v.mode === 'yuk' ? [100, 160, 200, 210, 250, 315].map(pp => { const Dx = nextIn(BORES, Math.sqrt(4 * Freq / (PI * pp / 10 * eta))); if (!Dx) return null; const dx = nearest(RODS.filter(x => x < Dx * 0.8), Dx * Math.sqrt(1 - 1 / phi)); return [pp, Dx, dx]; }).filter(Boolean) : [];
       // maliyet
       const Lt = stroke + 0.6 * D + 50, Lr = stroke + 1.3 * D + 60, rho = 7.85e-6;
       const mT = rho * PI / 4 * (OD * OD - D * D) * Lt, mR = rho * PI / 4 * d * d * Lr, mP = rho * PI / 4 * OD * OD * (0.9 * D + 50);
@@ -216,17 +231,29 @@
           ['Hız (çıkış / dönüş)', ok(Q) ? `${f(vo, 3)} / ${f(vi, 3)} m/s` : '-'],
           ['Süre (çıkış / dönüş)', ok(Q) && stroke ? `${f(stroke / 1000 / vo, 1)} / ${f(stroke / 1000 / vi, 1)} s` : '-'],
           ['Yağ hacmi (çıkış)', `${f(A * stroke / 1e6, 2)} litre`],
-        ]) +
+          ['Gereken pompa debisi', ok(Q) ? `${f(Q, 1)} l/dk${Qt ? ` (${f(v.tSure, 1)} s çıkış için)` : ''}` : '-'],
+          ['Pompa gücü / elektrik motoru', ok(Q) ? `${f(Pkw, 2)} kW → ${mot ? mot + ' kW motor' : 'çok büyük'}` : '-'],
+        ]) + (opts.length ? `<h3>Basınca göre seçenekler (${f(v.yuk, 1)} ton)</h3>` + table(['Basınç', 'Piston / mil', ''], opts.map(([pp, Dx, dx]) => [`${pp} bar`, `Ø${Dx} / Ø${dx}`, pp === p ? '<b>seçili</b>' : `<button class="btn" data-pp="${pp}" style="padding:4px 10px">Seç</button>`])) : '') +
         `<h3>Kaba maliyet (1 adet, gider ve kâr hariç)</h3>` + table(null, lines.map(([n, x]) => [esc(n), tl(x)]).concat([['<b>Toplam maliyet</b>', `<b>${tl(cost)}</b>`], [`Genel gider + kâr ile birim fiyat`, `<b>${tl(cost * kFactor())}</b>`]])) +
         `<p class="note">Ön hesaptır. Kafa/piston ölçüleri, kaynak ve keçe tipi tasarıma göre değişir; nihai tasarım ve basınç testi zorunludur. Fiyatlar Hidrolik → Fiyatlar'dan değiştirilir.</p>`;
       cyl3D($('#hy3d'), { D, OD, d, Lt, ext: stroke * 0.6, eye: Math.max(12, d * 0.45) });
+      $('#hyHead').innerHTML = '';
+      out.querySelectorAll('[data-pp]').forEach(b => b.onclick = () => { const i = root.querySelector('[data-hk="p"]'); i.value = b.dataset.pp; i.dispatchEvent(new Event('input')); });
+      const ad = `Hidrolik silindir Ø${D}/Ø${d} × ${f(stroke, 0)}`;
+      H().store.set('hyd.ctx', { D, d, s: stroke, p, Q: ok(Q) ? +Q.toFixed(1) : 0, F: Math.max(Fp, Fc), phi: A / Aa, ad, closed, OD });
+      last.Q = Q;
     }
     F.bind(root);
-    $('#hyQ').onclick = () => { if (!last) return; const L = last;
+    const goQ = () => { if (!last) return; const L = last;
       H().openQuote(serviceQuote({ title: 'Hidrolik silindir imalatı', part: `Silindir Ø${L.D}/Ø${L.d} × ${f(L.stroke, 0)}`, qty: L.qty, mat: 'ST52 boru, CK45 krom mil',
         meta: [['Piston / mil', `Ø${L.D} / Ø${L.d} mm`], ['Strok', `${f(L.stroke, 0)} mm`], ['Çalışma basıncı', `${f(L.p, 0)} bar`], ['İtme / çekme', `${f(L.Fp / 1000, 0)} / ${f(L.Fc / 1000, 0)} kN`], ['Kapalı boy', `${f(L.closed, 0)} mm`], ['Ağırlık', `~${f(L.mass, 0)} kg`]],
         lines: L.lines, shot: snap3() })); };
-    $('#hyT').onclick = () => { if (!last) return; openTool('test', { tanim: `Hidrolik silindir Ø${last.D}/Ø${last.d} × ${f(last.stroke, 0)}`, pw: last.p }); };
+    const link = id => () => { const c = ctx(); openTool(id, { vals: S_(LINKS[id](c)) }); };
+    const items = [['Teklif hazırla', goQ], ['Hortum seç', link('hortum')], ['Pompa ve motor', link('pompa')], ['Hız ve süre', link('hiz')], ['Pim kontrolü', link('pim')], ['Valf seç', link('valf')], ['Tank ve soğutma', link('tank')],
+      ['Piston torna hesabı', () => { if (!last) return; H().openTorna(`Piston Ø${last.D}`, [{ d: last.D, di: Math.round(last.d * 0.6), l: Math.round(0.6 * last.D) }]); }],
+      ['Mil torna hesabı', () => { if (!last) return; H().openTorna(`Krom mil Ø${last.d}`, [{ d: last.d, di: 0, l: Math.round(last.stroke + 1.3 * last.D + 60) }]); }],
+      ['Test raporu', link('test')]];
+    $('#hyNext').innerHTML = nextBar(items); bindNext(root, items);
   });
 
   /* ---------- 2. Hortum seçimi ---------- */
@@ -261,8 +288,15 @@
         (rows.length ? `<h3>Uygun hortumlar (ucuzdan pahalıya)</h3>` + table(['Tip', 'Ölçü', 'Çalışma bas.', 'Min. bükülme R', 'Hız', 'Basınç kaybı'], rows) + `<p class="note">İlk satır genelde en ekonomik seçimdir. Patlama basıncı çalışma basıncının 4 katıdır (EN 853/856). Basınç darbeleri olan hatlarda bir üst sınıf seçin. Değerler tipik katalog değerleridir; kullandığınız markanın kataloğuyla doğrulayın. Rakor ve dirsek kayıpları dahil değildir.</p>`
           : warnP('Bu basınç ve debi için tablodaki hortumlardan uygun olan yok; iki paralel hat ya da boru düşünün.'));
     });
+    let best = null;
     root.innerHTML = F.html + '<div id="hyOut"></div>';
     F.bind(root);
+    const items = [['Hortum imalat teklifi', () => { const v = saved('hortum'); if (best) H().store.set('hyd.in.hortumImalat.rows', [{ t: best.t, dn: best.dn, L: num(v.L) || 1, n: 2, sp: 0 }]); openTool('hortumImalat'); }],
+      ['Test raporu (2× test)', () => { const v = saved('hortum'); openTool('test', { vals: S_({ tanim: best ? `Hortum ${best.t} DN${best.dn} × ${v.L} m` : 'Hortum takımı', pw: best ? best.pw : num(v.p), tip: '2' }) }); }],
+      ['Valf seç', () => { const v = saved('hortum'); openTool('valf', { vals: S_({ Q: num(v.Q) }) }); }]];
+    root.insertAdjacentHTML('beforeend', nextBar(items)); bindNext(root, items);
+    function pick() { const v = saved('hortum'), Q = num(v.Q), p = num(v.p); if (!ok(Q) || !ok(p)) { best = null; return; } const dmin = Math.sqrt(4 * Q / 60000 / vTarget(v.hat, p) / PI) * 1000; for (const t of HOSE_ORDER) { const r = HOSES[t].rows.find(x => x[1] >= dmin * 0.97 && x[2] >= p); if (r) { best = { t, dn: r[0], pw: r[2] }; return; } } best = null; }
+    pick(); root.addEventListener('input', pick); root.addEventListener('change', pick);
   });
 
   /* ---------- 3. Silindir hız ve süre ---------- */
@@ -275,6 +309,8 @@
         ['Diferansiyel (rejeneratif) çıkış', `${f(vr, 3)} m/s · ${f(v.s / 1000 / vr, 1)} s (kuvvet mil alanına düşer)`], ['Dönüşte tanka giden debi', `${f(v.Q * A / Aa, 1)} l/dk (dönüş filtresi buna göre seçilir)`], ['Alan oranı', f(A / Aa, 2)]]);
     });
     root.innerHTML = F.html + '<div id="hyOut"></div>'; F.bind(root);
+    const items = [['Pompa ve motor', () => { const v = saved('hiz'); openTool('pompa', { vals: S_({ V: Math.ceil(num(v.Q) * 1000 / (1450 * 0.92)), n: 1450 }) }); }], ['Hortum seç', () => { const v = saved('hiz'); openTool('hortum', { vals: S_({ Q: num(v.Q) }) }); }], ['Valf seç (dönüş debisi)', () => { const v = saved('hiz'); const D = num(v.D), d = num(v.d); openTool('valf', { vals: S_({ Q: Math.ceil(num(v.Q) * D * D / (D * D - d * d)) }) }); }]];
+    root.insertAdjacentHTML('beforeend', nextBar(items)); bindNext(root, items);
   });
 
   /* ---------- 4. Pompa ve motor ---------- */
@@ -297,6 +333,9 @@
       out.innerHTML = r.length ? kv(r) : warnP('Değerleri girin.');
     });
     root.innerHTML = F.html + '<div id="hyOut"></div>'; F.bind(root);
+    const pq = () => { const v = saved('pompa'); return { Q: +(num(v.V) * num(v.n) * (num(v.ev) || 92) / 100 / 1000).toFixed(1), p: num(v.p) }; };
+    const items = [['Hortum seç', () => openTool('hortum', { vals: S_(pq()) })], ['Valf seç', () => openTool('valf', { vals: S_({ Q: pq().Q }) })], ['Tank ve soğutma', () => { const v = saved('pompa'), x = pq(); openTool('tank', { vals: S_({ Q: x.Q, Pin: x.p * x.Q / 600 / ((num(v.et) || 85) / 100) }) }); }]];
+    root.insertAdjacentHTML('beforeend', nextBar(items)); bindNext(root, items);
   });
 
   /* ---------- 5. Pim ve burç ---------- */
@@ -404,12 +443,13 @@
       cur = { v, L };
     });
     let cur = null;
-    root.innerHTML = F.html + '<div id="hyOut"></div><div class="row" style="margin-top:10px"><button class="btn tape" id="hyQ">Teklif hazırla</button><button class="btn ghost" id="hyT">Test raporu + QR</button></div>' + templateBar('revizyon');
+    root.innerHTML = F.html + '<div id="hyOut"></div><div class="row" style="margin-top:10px"><button class="btn tape" id="hyQ">Teklif hazırla</button><button class="btn ghost" id="hyT">Test raporu + QR</button><button class="btn ghost" id="hyH">Hortum seç</button></div>' + templateBar('revizyon');
     F.bind(root); bindTemplates(root, 'revizyon');
     $('#hyQ').onclick = () => { if (!cur) return; const v = cur.v;
       H().openQuote(serviceQuote({ title: 'Hidrolik silindir revizyonu', part: `${v.makine || 'Silindir'} Ø${v.D}/Ø${v.d} × ${f(v.s, 0)}`, qty: ok(v.adet) ? Math.round(v.adet) : 1,
         meta: [['Silindir', `Ø${v.D} / Ø${v.d} × ${f(v.s, 0)} mm`], ['Garanti', ok(v.garanti) ? `${v.garanti} ay` : '-']], lines: cur.L })); };
-    $('#hyT').onclick = () => { if (!cur) return; openTool('test', { tanim: `${cur.v.makine || 'Silindir'} Ø${cur.v.D}/Ø${cur.v.d} × ${f(cur.v.s, 0)} revizyon`, garanti: cur.v.garanti }); };
+    $('#hyT').onclick = () => { if (!cur) return; openTool('test', { vals: S_({ tanim: `${cur.v.makine || 'Silindir'} Ø${cur.v.D}/Ø${cur.v.d} × ${f(cur.v.s, 0)} revizyon`, garanti: cur.v.garanti, tip: '1.5', kece: cur.v.kece === '1' ? `Keçe seti Ø${cur.v.D}/Ø${cur.v.d} değişti` : '' }) }); };
+    $('#hyH').onclick = () => openTool('hortum');
   });
 
   /* ---------- 10. Hortum imalat teklifi ---------- */
@@ -430,7 +470,7 @@
       root.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { st.splice(+b.dataset.del, 1); if (!st.length) st.push({ t: '2SN', dn: 12, L: 1, n: 1, sp: 0 }); H().store.set('hyd.in.hortumImalat.rows', st); draw(); });
       $('#hyAdd').onclick = () => { st.push({ ...st[st.length - 1] }); H().store.set('hyd.in.hortumImalat.rows', st); draw(); };
       $('#hyQ').onclick = () => { const L = lines(); H().openQuote(serviceQuote({ title: 'Hidrolik hortum imalatı', part: `${st.reduce((a, r) => a + (r.n || 0), 0)} adet hortum takımı`, meta: [['Takımlar', st.map(r => `${r.n}× ${r.t} DN${r.dn} ${f(r.L, 2)} m`).join(', ')]], lines: L })); };
-      $('#hyT').onclick = () => { const r = st[0], h = HOSES[r.t].rows.find(x => x[0] === +r.dn); openTool('test', { tanim: `Hortum ${r.t} DN${r.dn} × ${f(r.L, 2)} m`, pw: h ? h[2] : '' }); };
+      $('#hyT').onclick = () => { const r = st[0], h = HOSES[r.t].rows.find(x => x[0] === +r.dn); openTool('test', { vals: S_({ tanim: `Hortum ${r.t} DN${r.dn} × ${f(r.L, 2)} m`, pw: h ? h[2] : undefined, tip: '2' }) }); };
       calc();
     };
     const lines = () => st.filter(r => ok(r.L) && ok(r.n)).map(r => {
@@ -444,14 +484,16 @@
   /* ---------- 11. Kova imalat teklifi ---------- */
   tool('kova', 'Teklif', 'Kova imalat teklifi', 'Sac ağırlıkları, diş/adaptör, kaynak, boya; SAE J296 kapasite tahmini', root => {
     const F = form('kova', [
-      { k: 'W', l: 'İç genişlik', u: 'mm', d: 1000 }, { k: 'Ls', l: 'Sarım (alt+sırt) sac açınım boyu', u: 'mm', d: 1600 }, { k: 't1', l: 'Sarım sacı kalınlığı', u: 'mm', d: 10 },
+      { h: 'Hızlı tahmin' }, { k: 'ton', l: 'Makine tonajı', u: 'ton', d: 20 }, { k: 'Vh', l: 'İstenen kova hacmi (tepeleme)', u: 'm³', d: 1.0 },
+      { note: 'Tonaj ve hacmi yazıp "Tahmini ölçüleri doldur"a basın; aşağıdaki ölçüler tipik oranlarla dolar, siz düzeltirsiniz.' },
+      { h: 'Kova ölçüleri' }, { k: 'W', l: 'İç genişlik', u: 'mm', d: 1000 }, { k: 'Ls', l: 'Sarım (alt+sırt) sac açınım boyu', u: 'mm', d: 1600 }, { k: 't1', l: 'Sarım sacı kalınlığı', u: 'mm', d: 10 },
       { k: 'Ay', l: 'Bir yan sacın alanı', u: 'cm²', d: 3200, hint: 'Yan profil çiziminden; bilinmiyorsa derinlik × boy × 0,75' }, { k: 't2', l: 'Yan sac kalınlığı', u: 'mm', d: 12 },
       { k: 'bh', l: 'Bıçak yüksekliği', u: 'mm', d: 200 }, { k: 't3', l: 'Bıçak kalınlığı', u: 'mm', d: 25 }, { k: 'kul', l: 'Kulak, göz, takviyeler', u: 'kg', d: 60 },
       { k: 'nd', l: 'Diş sayısı', u: 'adet', d: 5 }, { k: 'hk', l: 'Kesim + büküm + kaynak', u: 'saat', d: 14 }, { k: 'hard', l: 'Aşınma sacı (Hardox) kullanılan', opts: [['bicak', 'Yalnız bıçak'], ['bicak+sarim', 'Bıçak + sarım'], ['hepsi', 'Hepsi']], d: 'bicak+sarim' },
       { h: 'Kapasite tahmini (isteğe bağlı)' }, { k: 'Ap', l: 'Yan profil iç alanı', u: 'cm²', d: 2800 }, { k: 'ao', l: 'Ağız açıklığı (bıçak–arka kenar)', u: 'mm', d: 900 },
     ], v => calc(v));
     let cur = null;
-    root.innerHTML = F.html + '<div id="hyOut"></div><div class="row" style="margin-top:10px"><button class="btn tape" id="hyQ">Teklif hazırla</button></div>' + templateBar('kova');
+    root.innerHTML = F.html + '<div id="hyOut"></div><div class="row" style="margin-top:10px"><button class="btn tape" id="hyQ">Teklif hazırla</button><button class="btn" id="hyE">Tahmini ölçüleri doldur</button><button class="btn ghost" id="hyK">Kaldırma kapasitesine aktar</button></div>' + templateBar('kova');
     function calc(v) {
       const rho = 7.85e-6, mS = rho * v.W * v.Ls * v.t1, mY = 2 * rho * v.Ay * 100 * v.t2, mB = rho * v.W * v.bh * v.t3, mK = ok(v.kul) ? v.kul : 0;
       const hx = v.hard, pr = (isH) => isH ? P('hardox') : P('st52');
@@ -467,6 +509,15 @@
       cur = { v, L, kg };
     }
     F.bind(root); bindTemplates(root, 'kova');
+    root.querySelector('#hyE').onclick = () => { // tipik oranlar (kaba): genişlik ~ V^0,45, sac kalınlığı tonajla artar
+      const v = saved('kova'), T = num(v.ton), V = num(v.Vh); if (!ok(T) || !ok(V)) { H().toast('Tonaj ve hacmi girin'); return; }
+      const W = Math.round(1150 * Math.pow(V, 0.45) / 10) * 10, Ap = V / 1.2 / (W / 1000), Ls = Math.round(1.9 * Math.sqrt(Ap / 0.75) * 1000 / 10) * 10;
+      const t1 = Math.min(25, Math.max(5, Math.round(5 + 0.3 * T))), cl = x => Math.min(40, x);
+      H().store.set('hyd.in.kova', Object.assign(v, S_({ W, Ls, t1, t2: t1 + 2, Ay: Math.round(Ap * 1.15 * 1e4 / 10) * 10, Ap: Math.round(Ap * 1e4 / 10) * 10, ao: Math.round(Math.sqrt(Ap) * 1100 / 10) * 10,
+        bh: Math.round((150 + 5 * T) / 10) * 10, t3: cl(Math.round(t1 * 2)), kul: Math.round(25 * Math.pow(T, 0.8)), nd: Math.max(3, Math.round(W / 220)), hk: Math.round(6 + 0.5 * T) })));
+      openTool('kova'); H().toast('Tahmini ölçüler dolduruldu; kontrol edip düzeltin');
+    };
+    root.querySelector('#hyK').onclick = () => { if (!cur) return; const q = H().store.get('kal.quick', {}); q.m2 = String(Math.round(cur.kg)); if (ok(num(saved('kova').Vh))) q.V2 = saved('kova').Vh; H().store.set('kal.quick', q); H().store.set('kal.mode', 'quick'); openTool('kaldirma'); H().toast('Yeni kova ağırlığı aktarıldı'); };
     $('#hyQ').onclick = () => { if (!cur) return; H().openQuote(serviceQuote({ title: 'Kova imalatı', part: `Kova ${cur.v.W} mm`, mat: 'Hardox / S355', meta: [['İç genişlik', `${cur.v.W} mm`], ['Ağırlık', `~${f(cur.kg, 0)} kg`]], lines: cur.L })); };
   });
 
@@ -477,16 +528,17 @@
     const F = form('test', [
       { k: 'musteri', l: 'Müşteri', text: true, d: '' }, { k: 'isno', l: 'İş / seri no', text: true, d: '' },
       { k: 'tanim', l: 'Ürün', text: true, d: (pre && pre.tanim) || 'Hidrolik silindir', wide: true },
-      { k: 'pw', l: 'Çalışma basıncı', u: 'bar', d: (pre && pre.pw) || 200 }, { k: 'pt', l: 'Test basıncı (0 = 1,5×)', u: 'bar', d: 0 },
+      { k: 'tip', l: 'Test edilen', opts: [['1.5', 'Silindir / valf bloğu (1,5 × çalışma)'], ['2', 'Hortum takımı (2 × çalışma, EN 853/856)']], d: '1.5', wide: true },
+      { k: 'pw', l: 'Çalışma basıncı', u: 'bar', d: (pre && pre.pw) || 200 }, { k: 'pt', l: 'Test basıncı (0 = otomatik)', u: 'bar', d: 0 },
       { k: 'sure', l: 'Test süresi', u: 'dk', d: 5 }, { k: 'dus', l: 'Basınç düşümü', u: 'bar', d: 0 },
       { k: 'sonuc', l: 'Sonuç', opts: [['ok', 'Sızıntı yok — UYGUN'], ['no', 'Sızıntı var — UYGUN DEĞİL']], d: 'ok' },
       { k: 'tarih', l: 'Test tarihi', text: true, d: today }, { k: 'garanti', l: 'Garanti', u: 'ay', d: (pre && pre.garanti) || 6 },
       { k: 'eden', l: 'Testi yapan', text: true, d: '' }, { k: 'kece', l: 'Keçe seti / not', text: true, d: '', wide: true },
     ], v => { cur = v; draw(); });
     let cur = null;
-    root.innerHTML = F.html + '<div id="hyOut"></div><div class="row" style="margin-top:10px"><button class="btn tape" id="hyP">Raporu yazdır / PDF</button><button class="btn" id="hyL">Etiket yazdır</button></div>';
-    if (pre) { const s = saved('test'); Object.assign(s, pre.tanim ? { tanim: pre.tanim } : {}, pre.pw ? { pw: String(pre.pw) } : {}, pre.garanti ? { garanti: String(pre.garanti) } : {}); H().store.set('hyd.in.test', s); root.querySelectorAll('[data-hk]').forEach(i => { if (s[i.dataset.hk] !== undefined) i.value = s[i.dataset.hk]; }); }
-    const pt = v => ok(v.pt) ? v.pt : v.pw * 1.5;
+    root.innerHTML = F.html + '<div id="hyOut"></div><div class="row" style="margin-top:10px"><button class="btn tape" id="hyP">Raporu yazdır / PDF</button><button class="btn" id="hyL">Etiket yazdır</button><button class="btn ghost" id="hyB">Bakım kaydına ekle</button></div>';
+    if (pre && !pre.vals) { const s = saved('test'); Object.assign(s, pre.tanim ? { tanim: pre.tanim } : {}, pre.pw ? { pw: String(pre.pw) } : {}, pre.garanti ? { garanti: String(pre.garanti) } : {}); H().store.set('hyd.in.test', s); root.querySelectorAll('[data-hk]').forEach(i => { if (s[i.dataset.hk] !== undefined) i.value = s[i.dataset.hk]; }); }
+    const pt = v => ok(v.pt) ? v.pt : v.pw * (num(v.tip) || 1.5);
     const gEnd = v => { const d = new Date(v.tarih); if (isNaN(d) || !ok(v.garanti)) return ''; d.setMonth(d.getMonth() + v.garanti); return d.toLocaleDateString('tr-TR'); };
     const qrText = v => `${H().prof().firma || 'Tornaly'}\n${v.tanim}\nNo: ${v.isno || '-'}\nTest: ${f(pt(v), 0)} bar ${v.sure} dk ${v.sonuc === 'ok' ? 'UYGUN' : 'UYGUN DEĞİL'}\nÇalışma: ${f(v.pw, 0)} bar\nTarih: ${new Date(v.tarih).toLocaleDateString('tr-TR')}${gEnd(v) ? '\nGaranti: ' + gEnd(v) : ''}${v.kece ? '\n' + v.kece : ''}${H().prof().tel ? '\nTel: ' + H().prof().tel : ''}`;
     function doc(v) {
@@ -502,6 +554,15 @@
     function draw() { if (!cur) return; $('#hyOut').innerHTML = `<div style="margin-top:12px">${doc(cur)}</div><h3>Etiket önizleme</h3>${label(cur)}`; }
     F.bind(root);
     $('#hyP').onclick = () => cur && H().printDoc(doc(cur));
+    $('#hyB').onclick = async () => {
+      if (!cur) return; const db = H().store.get('hyd.bakim', { mak: [] });
+      const ad = await H().askText('Hangi makineye eklensin? (Bakım kaydındaki adı; yoksa yeni açılır)', (db.mak[0] && db.mak[0].ad) || cur.musteri || ''); if (!ad) return;
+      let m = db.mak.find(x => x.ad.toLocaleLowerCase('tr') === ad.toLocaleLowerCase('tr'));
+      if (!m) { m = { ad, musteri: cur.musteri || '', seri: '', saat: 0, yagSaat: 1000, filSaat: 500, kayit: [], yag: [] }; db.mak.unshift(m); }
+      const last = (m.kayit || [])[0] || {};
+      (m.kayit = m.kayit || []).unshift({ tarih: cur.tarih, is: `${cur.tanim} — ${f(pt(cur), 0)} bar test ${cur.sonuc === 'ok' ? 'uygun' : 'UYGUN DEĞİL'}${cur.isno ? ' (' + cur.isno + ')' : ''}`, saat: m.saat, garanti: cur.garanti || 0, tutar: 0, yagSaat: last.yagSaat || 0, filSaat: last.filSaat || 0 });
+      H().store.set('hyd.bakim', db); H().toast('Bakım kaydına eklendi: ' + m.ad);
+    };
     $('#hyL').onclick = async () => { if (!cur) return; const n = await H().askNum('Kaç etiket basılsın?', 1); if (!(n > 0)) return; H().printDoc(`<div>${Array.from({ length: Math.min(60, n) }, () => label(cur)).join('')}</div>`); };
   });
 
@@ -674,6 +735,12 @@
     const t = TOOLS.find(x => x.id === id); if (!t) return menu();
     rootEl.innerHTML = `<div class="row" style="margin:4px 0 8px"><button class="btn ghost" id="hyBack">← Hidrolik araçları</button></div><h2 style="margin-top:4px">${esc(t.title)}</h2><div id="hyTool"></div>`;
     $('#hyBack').onclick = () => { menu(); window.scrollTo(0, 0); };
+    if (pre && pre.vals) H().store.set('hyd.in.' + id, Object.assign(saved(id), pre.vals));
+    const c = ctx();
+    if (c && LINKS[id] && !(pre && pre.vals)) {
+      rootEl.querySelector('#hyTool').insertAdjacentHTML('beforebegin', `<div class="note" style="display:flex;gap:8px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-s);padding:8px 10px;margin:0 0 8px"><span>Son silindir: <b>Ø${c.D}/Ø${c.d} × ${f(c.s, 0)}</b>, ${f(c.p, 0)} bar${c.Q ? ', ' + f(c.Q, 0) + ' l/dk' : ''}</span><button class="btn" id="hyCtx" style="flex:none">Değerleri kullan</button></div>`);
+      $('#hyCtx').onclick = () => openTool(id, { vals: S_(LINKS[id](c)) });
+    }
     try { t.render($('#hyTool'), pre); } catch (e) { $('#hyTool').innerHTML = warnP('Bu araç açılamadı: ' + esc(e.message)); console.error(e); }
     window.scrollTo(0, 0);
   }

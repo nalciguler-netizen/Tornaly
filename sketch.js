@@ -280,7 +280,7 @@
     root.innerHTML = `
       <div class="sk-bar" data-r="tools">
         <button data-t="sel">Seç</button><button data-t="line">Çizgi</button><button data-t="rect">Dikdörtgen</button>
-        <button data-t="circle">Daire</button><button data-t="arc">Yay</button><button data-t="dim">Ölçü</button>
+        <button data-t="circle">Daire</button><button data-t="arc">Yay</button><button data-t="dim">Ölçü</button><button data-a="del" style="color:var(--err)">Sil</button>
       </div>
       <svg class="sk-cv" aria-label="Çizim alanı"></svg>
       <p class="sk-st"></p>
@@ -789,6 +789,13 @@
     root.querySelector('[data-a="clear"]').onclick = async () => {
       const c = await sheet('Çizimin tamamı silinsin mi?', { choices: ['Vazgeç', 'Sil'] });
       if (c === 1) { snapshot(); M = newModel(); pend = []; preview = null; sel = { pts: new Set(), ents: new Set(), cons: new Set() }; lastStat = { ok: true, dof: 0 }; fit(); changed(); }
+    };
+    root.querySelector('[data-a="del"]').onclick = async () => {
+      if (sel.pts.size || sel.ents.size || sel.cons.size) { delSelected(); return; }
+      if (!Object.keys(M.ents).length) { toast('Çizim zaten boş.'); return; }
+      const c = await sheet('Hiçbir şey seçili değil. Ne silinsin?', { choices: ['Vazgeç', 'Son çizilen öğe', 'Çizimin tamamı'] });
+      if (c === 1) { const ids = Object.keys(M.ents); sel = { pts: new Set(), ents: new Set([ids[ids.length - 1]]), cons: new Set() }; delSelected(); }
+      if (c === 2) { snapshot(); M = newModel(); pend = []; preview = null; sel = { pts: new Set(), ents: new Set(), cons: new Set() }; lastStat = { ok: true, dof: 0 }; fit(); changed(); }
     };
     root.querySelector('[data-a="dxf"]').onclick = () => download('cizim.dxf', toDXF(M), 'application/dxf');
     root.querySelector('[data-a="svg"]').onclick = () => download('cizim.svg', toSVG(M), 'image/svg+xml');

@@ -238,36 +238,98 @@
   }
   const lens = () => M.cyls.map((c, k) => c.Lmin + ext[k] * c.s);
 
+  // Makine gövdesi silueti (dünya koordinatı, metre). Kol, kova ve silindirler mekanizmadan çizilir.
+  function body(tip) {
+    const R = (x, y, w, h, c, r = 0.12) => ({ t: 'r', x, y, w, h, c, r }), C = (x, y, r, c) => ({ t: 'c', x, y, r, c }), Pg = (pts, c) => ({ t: 'p', pts, c });
+    const Y_ = '#f2b705', D = '#2b3238', G = '#55606a', Gl = '#9fb3c0';
+    if (tip === 'ekskavator') return [R(-2.1, 0, 4.2, 0.95, D, 0.45), C(-1.65, 0.45, 0.36, G), C(1.65, 0.45, 0.36, G), R(-0.4, 0.95, 0.8, 0.25, G, 0.02),
+      R(-2.75, 1.2, 3.25, 1.05, Y_, 0.15), R(-2.85, 1.15, 0.85, 1.0, D, 0.2), R(-0.6, 2.25, 0.95, 1.05, Y_, 0.08), R(-0.48, 2.4, 0.7, 0.75, Gl, 0.05)];
+    if (tip === 'bekoArka') return [R(-3.6, 0.55, 4.5, 0.9, Y_, 0.15), R(-2.0, 1.45, 1.7, 1.45, Y_, 0.08), R(-1.85, 1.6, 1.4, 1.1, Gl, 0.05), R(-3.7, 0.6, 0.35, 0.5, D),
+      C(-2.4, 0.5, 0.5, D), C(-2.4, 0.5, 0.25, G), C(0, 0.65, 0.65, D), C(0, 0.65, 0.3, G), R(0.8, 0.95, 0.75, 0.85, D, 0.08), Pg([[0.85, 1.1], [1.0, 1.1], [M.xe + 0.15, 0], [M.xe - 0.15, 0]], D)];
+    if (tip === 'bekoOn') return [R(-2.8, 0.55, 3.6, 0.9, Y_, 0.15), R(-1.9, 1.45, 1.6, 1.45, Y_, 0.08), R(-1.75, 1.6, 1.3, 1.1, Gl, 0.05),
+      C(0, 0.5, 0.5, D), C(0, 0.5, 0.25, G), C(-2.2, 0.65, 0.65, D), C(-2.2, 0.65, 0.3, G)];
+    if (tip === 'loderL' || tip === 'loderP') return [R(-4.6, 0.7, 4.0, 1.25, Y_, 0.2), R(-4.75, 0.75, 0.45, 1.1, D, 0.15), R(-2.4, 1.95, 1.5, 1.55, Y_, 0.08), R(-2.25, 2.1, 1.2, 1.2, Gl, 0.05),
+      R(-0.95, 0.9, 0.9, 1.9, D, 0.05), C(0, 0.8, 0.8, D), C(0, 0.8, 0.38, G), C(-3.1, 0.8, 0.8, D), C(-3.1, 0.8, 0.38, G)];
+    if (tip === 'platform') return [R(-4.2, 0.85, 7.6, 0.45, D, 0.05), R(2.3, 0.95, 1.5, 1.85, '#e6ebee', 0.15), R(2.55, 1.85, 1.05, 0.7, Gl, 0.05), R(-0.6, 1.3, 1.2, 1.1, Y_, 0.1),
+      C(2.9, 0.5, 0.5, D), C(-2.2, 0.5, 0.5, D), C(-3.3, 0.5, 0.5, D), Pg([[M.xe - 0.1, 1.0], [M.xe + 0.1, 1.0], [M.xe + 0.25, 0], [M.xe - 0.25, 0]], G)];
+    return [R(-1.4, 0, 2.5, 0.3, D, 0.05), R(-0.25, 0.3, 0.5, 0.75, G, 0.05)];
+  }
   function svg(P, opts = {}) {
-    const all = P.concat([[M.xe, 0], [M.xm, 0]]), xs = all.map(p => p[0]), ys = all.map(p => p[1]).concat([0]);
-    const x0 = Math.min(...xs) - 0.5, x1 = Math.max(...xs) + 0.5, y0 = Math.min(...ys) - 0.4, y1 = Math.max(...ys) + 0.5;
-    const W = 360, Hh = Math.max(180, Math.min(320, W * (y1 - y0) / (x1 - x0))), k = Math.min(W / (x1 - x0), Hh / (y1 - y0));
-    const X = x => (x - x0) * k, Y = y => Hh - (y - y0) * k;
-    let s = `<svg viewBox="0 0 ${W} ${Hh}" style="width:100%;max-height:340px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-s);touch-action:none">`;
-    s += `<line x1="0" y1="${Y(0)}" x2="${W}" y2="${Y(0)}" stroke="var(--muted)" stroke-dasharray="4 3"/>`;
-    s += `<path d="M${X(M.xe)} ${Y(0)} l-7 12 h14z" fill="var(--warn)"/><text x="${X(M.xe) + 9}" y="${Y(0) + 12}" font-size="10" fill="var(--muted)">devrilme kenarı</text>`;
-    s += `<circle cx="${X(M.xm)}" cy="${Y(0) - 10}" r="5" fill="none" stroke="var(--ink)"/><text x="${X(M.xm) - 6}" y="${Y(0) - 18}" font-size="10" fill="var(--muted)">AM</text>`;
-    const col = ['#2B6683', '#566771', '#8a6d1f', '#3c7a4a', '#7a3c6a'];
-    M.bodies.forEach((b, bi) => { const q = b.p.map(id => P[M.idx[id]]); if (q.length === 2) s += `<line x1="${X(q[0][0])}" y1="${Y(q[0][1])}" x2="${X(q[1][0])}" y2="${Y(q[1][1])}" stroke="${col[bi % 5]}" stroke-width="4" stroke-linecap="round"/>`;
-      else s += `<polygon points="${q.map(p => X(p[0]) + ',' + Y(p[1])).join(' ')}" fill="${col[bi % 5]}" fill-opacity=".18" stroke="${col[bi % 5]}" stroke-width="3" stroke-linejoin="round"/>`; });
-    M.cyls.forEach((c, ci) => { const a = P[M.idx[c.a]], b = P[M.idx[c.b]]; s += `<line x1="${X(a[0])}" y1="${Y(a[1])}" x2="${X(b[0])}" y2="${Y(b[1])}" stroke="${opts.lim === ci ? 'var(--err)' : '#f2b705'}" stroke-width="7" stroke-linecap="round" opacity=".9"/><line x1="${X(a[0])}" y1="${Y(a[1])}" x2="${X(b[0])}" y2="${Y(b[1])}" stroke="#e6ebee" stroke-width="2"/>`; });
-    M.pts.forEach((p, i) => { const q = P[i]; s += p.g ? `<rect x="${X(q[0]) - 4}" y="${Y(q[1]) - 4}" width="8" height="8" fill="var(--ink)"/>` : `<circle cx="${X(q[0])}" cy="${Y(q[1])}" r="3.2" fill="var(--paper)" stroke="var(--ink)"/>`;
-      if (opts.labels) s += `<text x="${X(q[0]) + 5}" y="${Y(q[1]) - 5}" font-size="9" fill="var(--muted)">${esc(p.id)}</text>`; });
-    const L = P[M.idx[M.load]]; s += `<path d="M${X(L[0])} ${Y(L[1]) + 4} v22 m-5 -6 l5 6 l5 -6" stroke="var(--err)" stroke-width="2" fill="none"/>`;
-    if (opts.pts) opts.pts.forEach(([x, y, w, mx]) => { const t = Math.max(0, Math.min(1, w / mx)); s += `<circle cx="${X(x)}" cy="${Y(y)}" r="2.6" fill="hsl(${t * 120},70%,42%)"/>`; });
+    const sil = body(M.tip), sxs = [], sys = [];
+    sil.forEach(o => { if (o.t === 'r') { sxs.push(o.x, o.x + o.w); sys.push(o.y, o.y + o.h); } else if (o.t === 'c') { sxs.push(o.x - o.r, o.x + o.r); sys.push(o.y + o.r); } else o.pts.forEach(q => { sxs.push(q[0]); sys.push(q[1]); }); });
+    const L = P[M.idx[M.load]];
+    const sw = opts.pts || [], xs = P.map(p => p[0]).concat(sxs, [M.xe, L[0] - 0.9, L[0] + 0.9], sw.map(q => q[0])), ys = P.map(p => p[1]).concat(sys, [0, L[1] - 1.2], sw.map(q => q[1]));
+    const x0 = Math.min(...xs) - 0.4, x1 = Math.max(...xs) + 0.4, y0 = Math.min(...ys) - 0.15, y1 = Math.max(...ys) + 0.4;
+    const W = 360, Hd = Math.max(170, Math.min(300, W * (y1 - y0) / (x1 - x0))), k = Math.min(W / (x1 - x0), Hd / (y1 - y0)), Hh = Hd + (opts.pts ? 8 : 44);
+    const X = x => ((x - x0) * k).toFixed(1), Y = y => (Hd - (y - y0) * k).toFixed(1), K = v => (v * k).toFixed(1);
+    let s = `<svg viewBox="0 0 ${W} ${Hh}" style="width:100%;max-height:360px;background:linear-gradient(#eaf2f7,#f7f9fa);border:1px solid var(--line);border-radius:var(--r-s);touch-action:none" font-family="inherit">`;
+    // zemin
+    s += `<rect x="0" y="${Y(0)}" width="${W}" height="${Hh}" fill="#c9b79a"/><line x1="0" y1="${Y(0)}" x2="${W}" y2="${Y(0)}" stroke="#8b7a5e" stroke-width="2"/>`;
+    // dönme ekseni (ekskavatör, platform)
+    if (M.tip === 'ekskavator' || M.tip === 'platform') s += `<line x1="${X(0)}" y1="${Y(0)}" x2="${X(0)}" y2="${Y(Math.max(...ys))}" stroke="#7d8b95" stroke-dasharray="3 4"/>`;
+    // gövde
+    sil.forEach(o => {
+      if (o.t === 'r') s += `<rect x="${X(o.x)}" y="${Y(o.y + o.h)}" width="${K(o.w)}" height="${K(o.h)}" rx="${K(o.r)}" fill="${o.c}" stroke="#1c2830" stroke-width="1"/>`;
+      else if (o.t === 'c') s += `<circle cx="${X(o.x)}" cy="${Y(o.y)}" r="${K(o.r)}" fill="${o.c}" stroke="#1c2830" stroke-width="1"/>`;
+      else s += `<polygon points="${o.pts.map(q => X(q[0]) + ',' + Y(q[1])).join(' ')}" fill="${o.c}" stroke="#1c2830" stroke-width="1"/>`;
+    });
+    // kol parçaları: kalın, yuvarlak uçlu kiriş
+    const hull = q => { if (q.length < 3) return q; const pts = q.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]), cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); const lo = [], up = [];
+      for (const p of pts) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); }
+      for (const p of pts.reverse()) { while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop(); up.push(p); }
+      return lo.slice(0, -1).concat(up.slice(0, -1)); };
+    const isBucket = b => /kova|sepet/i.test(b.ad), bw = Math.max(5, 0.22 * k);
+    M.bodies.forEach(b => {
+      const q = b.p.map(id => P[M.idx[id]]), h = hull(q);
+      const fill = isBucket(b) ? '#3a4249' : /bağlantı|rocker|kol \(/i.test(b.ad) ? '#55606a' : '#f2b705';
+      if (h.length === 2) s += `<line x1="${X(h[0][0])}" y1="${Y(h[0][1])}" x2="${X(h[1][0])}" y2="${Y(h[1][1])}" stroke="${fill}" stroke-width="${(bw * 0.55).toFixed(1)}" stroke-linecap="round"/>`;
+      else s += `<polygon points="${h.map(p => X(p[0]) + ',' + Y(p[1])).join(' ')}" fill="${fill}" stroke="${fill}" stroke-width="${bw.toFixed(1)}" stroke-linejoin="round"/><polygon points="${h.map(p => X(p[0]) + ',' + Y(p[1])).join(' ')}" fill="none" stroke="#1c2830" stroke-opacity=".35" stroke-width="1"/>`;
+    });
+    // silindirler: gövde (koyu) + krom mil
+    M.cyls.forEach((c, ci) => {
+      const a = P[M.idx[c.a]], b = P[M.idx[c.b]], Ln = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, u = [(b[0] - a[0]) / Ln, (b[1] - a[1]) / Ln];
+      const bl = Math.min(Ln * 0.92, c.Lmin * 0.88), m = [a[0] + u[0] * bl, a[1] + u[1] * bl], wB = Math.max(4, c.D / 1000 * 1.6 * k), wR = Math.max(2, c.d / 1000 * 1.4 * k);
+      const hot = opts.lim === ci;
+      s += `<line x1="${X(a[0])}" y1="${Y(a[1])}" x2="${X(b[0])}" y2="${Y(b[1])}" stroke="#d9e1e6" stroke-width="${wR.toFixed(1)}" stroke-linecap="round"/><line x1="${X(a[0])}" y1="${Y(a[1])}" x2="${X(b[0])}" y2="${Y(b[1])}" stroke="#7f8c95" stroke-width="1" stroke-opacity=".5"/>`;
+      s += `<line x1="${X(a[0])}" y1="${Y(a[1])}" x2="${X(m[0])}" y2="${Y(m[1])}" stroke="${hot ? '#a3262a' : '#2b3238'}" stroke-width="${wB.toFixed(1)}" stroke-linecap="round"/>`;
+    });
+    // pimler
+    M.pts.forEach((p, i) => { const q = P[i]; s += `<circle cx="${X(q[0])}" cy="${Y(q[1])}" r="${p.g ? 3.4 : 2.6}" fill="#e6ebee" stroke="#1c2830" stroke-width="1.2"/>`;
+      if (opts.labels) s += `<text x="${+X(q[0]) + 5}" y="${+Y(q[1]) - 5}" font-size="9" fill="#1c2830">${esc(p.id)}</text>`; });
+    // parça adları
+    if (!opts.pts) M.bodies.filter(b => b.p.length > 2 && !/rocker|bağlantı/i.test(b.ad)).forEach(b => { const c = centroid(M, P, b); s += `<text x="${X(c[0])}" y="${+Y(c[1]) + 3}" font-size="10" font-weight="700" text-anchor="middle" fill="#1c2830" stroke="#fff" stroke-width="3" paint-order="stroke">${esc(b.ad.replace(/ \(.*\)/, ''))}</text>`; });
+    // devrilme noktası
+    s += `<path d="M${X(M.xe)} ${Y(0)} l-6 10 h12z" fill="#a3262a"/>`;
+    if (!opts.pts) s += `<text x="${X(M.xe)}" y="${+Y(0) + 20}" font-size="9" text-anchor="middle" fill="#1c2830" stroke="#c9b79a" stroke-width="3" paint-order="stroke">devrilme noktası</text>`;
+    // yük: zincir + ağırlık
+    const hy = L[1] - 0.55, wt = opts.rated;
+    s += `<line x1="${X(L[0])}" y1="${Y(L[1])}" x2="${X(L[0])}" y2="${Y(hy)}" stroke="#1c2830" stroke-width="1.5" stroke-dasharray="2 2"/>`;
+    if (!opts.pts) {
+      const lab = wt === undefined ? 'yük' : !isFinite(wt) ? '∞' : wt <= 0 ? '0 kg' : f(wt, 0) + ' kg', bwid = Math.max(44, lab.length * 6.5 + 10);
+      s += `<rect x="${+X(L[0]) - bwid / 2}" y="${Y(hy)}" width="${bwid}" height="18" rx="3" fill="#a3262a"/><text x="${X(L[0])}" y="${+Y(hy) + 13}" font-size="11" font-weight="700" text-anchor="middle" fill="#fff">${lab}</text>`;
+      // yarıçap ve yükseklik
+      const gy = Hh - 8, ox = M.tip === 'ekskavator' || M.tip === 'platform' ? 0 : M.xe;
+      s += `<line x1="${X(ox)}" y1="${gy}" x2="${X(L[0])}" y2="${gy}" stroke="#1c2830" stroke-width="1" marker-start="url(#ar)" marker-end="url(#ar)"/><text x="${(+X(ox) + +X(L[0])) / 2}" y="${gy - 3}" font-size="10" text-anchor="middle" fill="#1c2830">yatay ${f(L[0] - ox, 2)} m · yükseklik ${f(L[1], 2)} m</text>`;
+      s += `<defs><marker id="ar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#1c2830"/></marker></defs>`;
+    }
+    if (opts.pts) opts.pts.forEach(([x, y, w, mx]) => { const t = Math.max(0, Math.min(1, w / mx)); s += `<circle cx="${X(x)}" cy="${Y(y)}" r="3" fill="hsl(${t * 120},75%,40%)" stroke="#fff" stroke-width=".6"/>`; });
     return s + '</svg>';
   }
+
 
   function mech(root) {
     if (!M) loadM(H().store.get('kal.tpl', 'ekskavator'));
     root.innerHTML = `<div class="grid"><label class="f" style="grid-column:1/-1"><span>Şablon</span><div class="in"><select id="kmT">${TPL_NAMES.map(([k, n]) => `<option value="${k}"${k === tplId ? ' selected' : ''}>${n}</option>`).join('')}</select></div></label></div>
-      <p class="note" id="kmAd"></p><div id="kmSvg"></div><div id="kmSl"></div><div id="kmOut"></div>
+      <div class="note" style="background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--tape);border-radius:var(--r-s);padding:8px 12px;margin:6px 0 8px">
+        <b>Nasıl okunur?</b> Resim makinenin yandan görünüşüdür. Sarı parçalar bom ve kol, koyu çubuklar hidrolik silindirlerdir. Aşağıdaki kaydırıcılarla silindirleri açıp kapatın; kol resimde hareket eder. Kırmızı kutu, kolun ucuna o konumda <b>güvenle asılabilecek yükü</b> gösterir. Kol uzaklaştıkça bu değer düşer, çünkü makine öne devrilmeye yaklaşır (kırmızı üçgen: devrilme noktası).</div>
+      <p class="note" id="kmAd"></p><div id="kmSvg"></div><label class="chk" style="margin-top:4px"><input type="checkbox" id="kmLab"> Pim adlarını göster (ölçü girerken)</label><div id="kmSl"></div><div id="kmOut"></div>
       <div class="row" style="margin-top:10px"><button class="btn tape" id="kmSweep">Kaldırma tablosu çıkar</button><button class="btn ghost" id="kmRst">Şablona dön</button></div><div id="kmTab"></div>
       <details style="margin-top:12px"><summary>Ölçüleri düzenle (kendi makineniz)</summary><div id="kmEd"></div></details>
       <p class="note">Şablon ölçüleri örnektir; gerçek makine için pim koordinatlarını (yan görünüşten, metre) ve silindir verilerini girin. Silindir kaydırıcıları stroktaki konumu (% açıklık) gösterir. Sonuçlar ön hesaptır; kaldırma işlerinde üreticinin yük tablosu ve yetkili muayene esastır.</p>`;
     $('#kmT').onchange = () => { saveM(); loadM($('#kmT').value); H().store.set('kal.tpl', tplId); mech(root); };
     $('#kmRst').onclick = async () => { if (await H().ask('Bu şablondaki ölçüler varsayılana dönsün mü?')) { loadM(tplId, true); saveM(); mech(root); } };
     $('#kmSweep').onclick = () => sweep();
+    $('#kmLab').onchange = () => draw();
     sliders(); editor(); draw();
   }
   function sliders() {
@@ -285,7 +347,7 @@
     const R = evaluate(M, ls, lastX, pT, pH, lastL);
     if (!R) { $('#kmOut').innerHTML = warnP('Bu silindir boylarında mekanizma kapanmıyor (ulaşılamayan konum). Kaydırıcıları değiştirin ya da ölçüleri kontrol edin.'); return; }
     lastX = R.S.X; lastL = ls;
-    $('#kmSvg').innerHTML = svg(R.P, { lim: R.rated === pH * R.Wh ? R.lim : -1, labels: true });
+    $('#kmSvg').innerHTML = svg(R.P, { lim: R.rated === pH * R.Wh ? R.lim : -1, labels: $('#kmLab') && $('#kmLab').checked, rated: R.rated });
     const limBy = pT * R.Wt <= pH * R.Wh ? 'devrilme' : 'hidrolik: ' + M.cyls[R.lim].ad.toLowerCase();
     $('#kmOut').innerHTML = `<div class="plate" style="margin-top:10px"><div class="lbl">İzin verilen yük (bu konumda, ${esc(M.load)} noktasında)</div><div class="big">${kg(R.rated)}</div>
       <div class="sub"><span>Yarıçap <b>${f(R.L[0], 2)} m</b></span><span>Yükseklik <b>${f(R.L[1], 2)} m</b></span><span>Sınırlayan <b>${esc(limBy)}</b></span></div></div>
