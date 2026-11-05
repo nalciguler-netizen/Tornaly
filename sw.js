@@ -1,7 +1,7 @@
 /* Tornaly service worker: önce ağ, ağ yoksa önbellek.
    Böylece güncellemeler hemen görünür, internet yokken de uygulama açılır. */
-const CACHE = 'tornaly-v8';
-const CORE = ['./', './index.html', './manifest.json', './tornaly-192.png', './tornaly-512.png', './tornaly-maskable-512.png', './gizlilik.html', './kullanim-kosullari.html', './sketch.js'];
+const CACHE = 'tornaly-v9';
+const CORE = ['./', './index.html', './manifest.json', './tornaly-192.png', './tornaly-512.png', './tornaly-maskable-512.png', './gizlilik.html', './kullanim-kosullari.html', './sketch.js', './model3d.js', './qrcode.js', './hidrolik.js', './kaldirma.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).catch(() => {}));

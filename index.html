@@ -60,7 +60,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 
 /* alt menü */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-nav.tabs .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+nav.tabs .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
 nav.tabs button{background:none;border:0;padding:12px 4px 14px;font-family:var(--cond);font-size:1.05rem;font-weight:600;color:var(--muted);border-top:3px solid transparent}
 nav.tabs button[aria-selected="true"]{color:var(--ink);border-top-color:var(--tape)}
 section.view{display:none}
@@ -186,11 +186,28 @@ details summary{cursor:pointer;font-weight:600}
 .askbg{position:fixed;inset:0;z-index:10;background:rgba(10,15,18,.55);display:flex;align-items:center;justify-content:center;padding:16px}
 .ask{background:var(--surface);color:var(--ink);border-radius:var(--r-m);padding:18px;max-width:360px;width:100%}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+.hytools{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.hytool{text-align:left;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--tape);border-radius:var(--r-s);padding:10px 12px;cursor:pointer;font:inherit;display:grid;gap:3px}
+.hytool small{color:var(--muted);font-size:.8rem;line-height:1.25}
+.hytool:active{transform:translateY(1px)}
+#v-hidrolik details{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-s);padding:8px 12px;margin-top:6px}
+#v-hidrolik details summary{cursor:pointer}
+#v-hidrolik label.f small{display:block;color:var(--muted);font-size:.78rem;margin-top:2px}
+.qst{font:inherit;font-size:.82rem;padding:2px 4px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.msum{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;margin:8px 0 12px}
+.msum div{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-s);padding:8px 10px;font-size:.85rem}
+.msum b{display:block;font-size:1.05rem}
+#hydPrint{display:none}
+#v-hidrolik .tw td,#v-hidrolik .tw th,#hydPrint td,#hydPrint th{white-space:normal;text-align:left;vertical-align:top}
+#v-hidrolik .tw td:last-child{text-align:right}
+#v-hidrolik .matTable td:last-child{text-align:left}
 
 @media print{
   @page{margin:14mm}
   body{background:#fff}
-  .top,nav.tabs,.no-print,section.view:not(#v-teklif){display:none!important}
+  .top,nav.tabs,.no-print,.mic,.micbub,section.view:not(#v-teklif){display:none!important}
+  body.print-hyd main{display:none!important}
+  body.print-hyd #hydPrint{display:block!important}
   main{padding:0;max-width:none}
   #v-teklif{display:block!important}
   .doc{border:0;padding:0}
@@ -216,7 +233,9 @@ details summary{cursor:pointer;font-weight:600}
     <p><b>Çiz</b> sekmesinde parçayı telefonda kendiniz çizebilirsiniz: çizgi, dikdörtgen, daire ve yay çizin; öğeleri seçip yatay, dikey, paralel, dik, eşit, teğet gibi kısıtlar ve uzunluk, çap, mesafe ölçüleri verin. İç konturları delik ya da derinlikli cep yapabilirsiniz. Çizim DXF/SVG olarak da indirilebilir.</p>
     <p><b>Sesli komut:</b> sağ alttaki mikrofona dokunup konuşun. Örnekler: "mil dış çap 50 boy 120", "kademe ekle dış çap 40 boy 30", "plaka 200'e 100 kalınlık 6, 4 delik 13", "torna malzeme C45 adet 10 50 100", "teklif hazırla". Çiz ekranında: "çizgi", "dikdörtgen", seçili öğeye "uzunluk 100", "çap 20", "paralel", "teğet", "geri al".</p>
     <p>Öneri ve hata bildirimi için Ayarlar'daki <b>Geri bildirim gönder</b> düğmesini kullanın.</p>
+    <p><b>3B model:</b> SolidWorks, Fusion, Inventor gibi programlarda parçayı "Farklı kaydet → STEP" (ya da STL) ile kaydedip <b>Çizim seç</b>'ten açın. Hacim, ağırlık, ölçüler ve delik sayısı modelden hesaplanır.</p>
     <p>DWG dosyasını AutoCAD'de "Farklı Kaydet → DXF" ile kaydedin. Bloklu çizimlerde önce PATLAT komutunu kullanın. Ölçü, eksen ve yazı katmanları otomatik kapatılır.</p>
+    <p><b>Hidrolik</b> sekmesi: silindir tasarımı (çap, mil, burkulma, et kalınlığı, 3B, maliyet), hortum seçimi, pompa/motor, pim-burç, tank/akümülatör, kaldırma kapasitesi (ekskavatör, beko, loder, sepetli platform), revizyon, hortum ve kova teklifleri, basınç testi raporu, QR etiket, bakım ve garanti kaydı, rehberler ve birim çevirici.</p>
     <p>Kayıtlarınız yalnızca bu cihazda tutulur; Ayarlar'dan yedek alabilirsiniz.</p>
   </details>
   <h2>Parça</h2>
@@ -235,7 +254,7 @@ details summary{cursor:pointer;font-weight:600}
         <option value="mil">Kademeli mil</option>
       </select>
     </div>
-    <p class="note">DXF, SVG ve CAD programından kaydedilmiş PDF çizimler telefonda okunur; çiziminiz dışarı gönderilmez. Fotoğraf veya taranmış çizimler ekranda açılır, ölçüleri Hızlı parçaya girersiniz.</p>
+    <p class="note">DXF, SVG, CAD PDF ve 3B modeller (STEP, STL, OBJ, 3MF, IGES) telefonda okunur; çiziminiz dışarı gönderilmez. Fotoğraf veya taranmış çizimler ekranda açılır, ölçüleri Hızlı parçaya girersiniz.</p>
   </div>
   <div id="srcQuick" style="margin-top:12px" hidden>
     <div id="aiBox" class="aibox" hidden></div>
@@ -310,10 +329,14 @@ details summary{cursor:pointer;font-weight:600}
   <div id="quoteDoc"></div>
 </section>
 
+<!-- ================= HİDROLİK ================= -->
+<section class="view" id="v-hidrolik"><div id="hydRoot"></div></section>
+
 <!-- ================= GEÇMİŞ ================= -->
 <section class="view" id="v-gecmis">
   <h2>Geçmiş teklifler</h2>
-  <input id="hSearch" class="full" placeholder="Müşteri veya parça ara">
+  <div id="hSum"></div>
+  <div class="row" style="flex-wrap:nowrap"><input id="hSearch" class="full" placeholder="Müşteri veya parça ara" style="flex:1;min-width:0"><select id="hFilt" class="qst" style="padding:8px"><option value="">Tümü</option><option value="bekliyor">Bekliyor</option><option value="onay">Onaylandı</option><option value="red">Reddedildi</option></select></div>
   <ul class="hist" id="histList"></ul>
 </section>
 
@@ -336,8 +359,17 @@ details summary{cursor:pointer;font-weight:600}
   <h3>Saat ücretleri ve oranlar</h3>
   <div class="grid" id="rateFields"></div>
 
+  <h3>Döviz kurları</h3>
+  <p class="note" style="margin-top:0">Euro ya da dolar girilen fiyatlar bu kurla TL'ye çevrilir. <span id="kurTarih"></span></p>
+  <div class="grid">
+    <label class="f"><span>1 € =</span><div class="in"><input type="number" inputmode="decimal" id="kurEUR"><em>TL</em></div></label>
+    <label class="f"><span>1 $ =</span><div class="in"><input type="number" inputmode="decimal" id="kurUSD"><em>TL</em></div></label>
+  </div>
+  <div class="row" style="margin-top:8px"><button class="btn" id="kurAl">Güncel kuru al</button></div>
+  <p class="note">"Güncel kuru al" Avrupa Merkez Bankası referans kurlarını Frankfurter servisinden (frankfurter.dev) çeker; yalnızca kur sorulur, sizinle ilgili bilgi gönderilmez.</p>
+
   <h3>Malzemeler</h3>
-  <p class="note">Yoğunluk g/cm³, fiyat TL/kg (KDV hariç). Varsayılan fiyatlar Ekim 2026 toptan liste ortalamalarıdır; döküm alaşımlarında şarj malzemesi (hurda, pik, külçe) fiyatı esas alınmıştır. Piyasa haftalık değişir, tedarikçi fiyatınızı girin. Talaş kaldırma, dakikada kaldırılan ortalama talaş hacmidir.</p>
+  <p class="note">Yoğunluk g/cm³, fiyat kg başına (KDV hariç), para birimi satırdan seçilir. Varsayılan fiyatlar Ekim 2026 toptan liste ortalamalarıdır; döküm alaşımlarında şarj malzemesi (hurda, pik, külçe) fiyatı esas alınmıştır. Piyasa haftalık değişir, tedarikçi fiyatınızı girin. Talaş kaldırma, dakikada kaldırılan ortalama talaş hacmidir.</p>
   <div class="tw"><table class="matTable" id="matTable"></table></div>
 
   <h3>Döküm yöntemleri</h3>
@@ -366,7 +398,7 @@ details summary{cursor:pointer;font-weight:600}
     <p>Uygulamaya yüklediğiniz çizimleri kullanma hakkına sahip olduğunuzu kabul edersiniz. Uygulama ticari amaçla kullanılabilir. Uygulamanın kodu, adı ve tasarımı geliştiricisine aittir; izinsiz kopyalanamaz ve dağıtılamaz.</p>
   </details>
   <details><summary>Gizlilik</summary>
-    <p>Çizimleriniz, atölye bilgileriniz ve teklifleriniz yalnızca bu cihazdaki tarayıcı hafızasında saklanır. Hiçbir sunucuya gönderilmez, üçüncü kişilerle paylaşılmaz. Tarayıcı verilerini sildiğinizde kayıtlar da silinir. Sesli komut kullanırsanız konuşmanız telefonunuzun ses tanıma hizmetiyle (Google) yazıya çevrilir; Tornaly ses kaydı tutmaz.</p>
+    <p>Çizimleriniz, atölye bilgileriniz ve teklifleriniz yalnızca bu cihazdaki tarayıcı hafızasında saklanır. Hiçbir sunucuya gönderilmez, üçüncü kişilerle paylaşılmaz. Tarayıcı verilerini sildiğinizde kayıtlar da silinir. Sesli komut kullanırsanız konuşmanız telefonunuzun ses tanıma hizmetiyle (Google) yazıya çevrilir; Tornaly ses kaydı tutmaz. "Güncel kuru al" düğmesine basarsanız yalnızca döviz kuru sorulur; sizinle ilgili bilgi gönderilmez.</p>
   </details>
   <h3>Verilerim</h3>
   <p class="note" style="margin-top:0">Ayarlarınız ve teklif geçmişiniz yalnızca bu cihazda tutulur. Telefon değiştirmeden veya uygulamayı silmeden önce yedek alın.</p>
@@ -377,7 +409,7 @@ details summary{cursor:pointer;font-weight:600}
   </div>
 
   <h3>Hakkında</h3>
-  <p class="note" style="margin-top:0">Tornaly sürüm 1.7 · Geliştirici: Yurdagül Güler<br>
+  <p class="note" style="margin-top:0">Tornaly sürüm 1.8 · Geliştirici: Yurdagül Güler<br>
   Destek: <span style="user-select:all">yolhava.destek@gmail.com</span></p>
   <div class="row">
     <button class="btn" id="bFeedback">Geri bildirim gönder</button>
@@ -385,13 +417,15 @@ details summary{cursor:pointer;font-weight:600}
     <a class="btn ghost" href="kullanim-kosullari.html">Kullanım koşulları</a>
   </div>
   <details><summary>Açık kaynak lisansları</summary>
-    <p>three.js © 2010-2021 Three.js Authors, MIT lisansı. PDF.js © Mozilla Foundation, Apache 2.0 lisansı. Barlow ve Barlow Condensed yazı tipleri © The Barlow Project Authors, SIL Open Font License 1.1.</p>
+    <p>three.js © 2010-2021 Three.js Authors, MIT lisansı. PDF.js © Mozilla Foundation, Apache 2.0 lisansı. occt-import-js ve Open CASCADE Technology © ilgili yazarlar, LGPL 2.1 lisansı (STEP/IGES okuma; ayrı dosya olarak dinamik yüklenir). qrcode-generator © Kazuhiko Arase, MIT lisansı. Barlow ve Barlow Condensed yazı tipleri © The Barlow Project Authors, SIL Open Font License 1.1.</p>
   </details>
 </section>
 </main>
 
+<div id="hydPrint"></div>
 <nav class="tabs" aria-label="Bölümler"><div class="in" role="tablist">
   <button role="tab" data-v="hesap" aria-selected="true">Hesap</button>
+  <button role="tab" data-v="hidrolik" aria-selected="false">Hidrolik</button>
   <button role="tab" data-v="teklif" aria-selected="false">Teklif</button>
   <button role="tab" data-v="gecmis" aria-selected="false">Geçmiş</button>
   <button role="tab" data-v="ayar" aria-selected="false">Ayarlar</button>
@@ -403,7 +437,7 @@ details summary{cursor:pointer;font-weight:600}
   <div class="viewbar"><b>Müşteri çizimi</b><span class="row" style="gap:6px;flex-wrap:nowrap"><button class="btn ghost" id="dvMinus" aria-label="Uzaklaştır">−</button><button class="btn ghost" id="dvPlus" aria-label="Yakınlaştır">+</button><button class="btn ghost" id="dvRot">Döndür</button><button class="btn main" id="dvClose">Kapat</button></span></div>
   <div class="viewscroll" id="dvScroll"><img id="dvImg" alt="Müşteri çizimi"></div>
 </div>
-<div class="askbg" id="askBox" hidden><div class="ask" role="dialog" aria-modal="true" aria-labelledby="askMsg"><p id="askMsg"></p><div class="row" style="justify-content:flex-end"><button class="btn ghost" id="askNo">Vazgeç</button><button class="btn main" id="askYes">Evet</button></div></div></div>
+<div class="askbg" id="askBox" hidden><div class="ask" role="dialog" aria-modal="true" aria-labelledby="askMsg"><p id="askMsg"></p><input id="askIn" class="full" hidden style="margin-bottom:12px"><div class="row" style="justify-content:flex-end"><button class="btn ghost" id="askNo">Vazgeç</button><button class="btn main" id="askYes">Evet</button></div></div></div>
 
 <script>
 /**
@@ -818,6 +852,10 @@ const Core = (() => {
 
 </script>
 <script src="sketch.js"></script>
+<script src="model3d.js"></script>
+<script src="qrcode.js"></script>
+<script src="hidrolik.js"></script>
+<script src="kaldirma.js"></script>
 <script>
 (() => {
 'use strict';
@@ -865,6 +903,7 @@ const PRICE_DATE = 'Ekim 2026';
 const DEF_PROF = {
   firma: '', tel: '', mail: '', adres: '', logo: '',
   rates: { lazer: 3000, torna: 1200, freze: 1500, isleme: 1200 },
+  kur: { EUR: 56.46, USD: 49.79, date: '5 Kasım 2026 (varsayılan)' },
   overhead: 15, profit: 20, vat: 20, boyaM2: 150, galvKg: 30, bendPrice: 15,
   materials: DEF_MATS, methods: DEF_METHODS, saved: false, theme: 'auto'
 };
@@ -886,6 +925,7 @@ const mergeById = (defs, saved) => { const m = new Map((saved || []).map(x => [x
 prof.materials = prof.saved ? mergeById(DEF_MATS, prof.materials) : clone(DEF_MATS);
 prof.methods = mergeById(DEF_METHODS, prof.methods);
 prof.rates = { ...DEF_PROF.rates, ...prof.rates };
+prof.kur = { ...DEF_PROF.kur, ...(prof.kur || {}) };
 
 const state = {
   proc: 'sac', params: clone(DEF_PARAMS), mat: { sac: 'st37', torna: 'c45', freze: 'al6061', dokum: 'gg25' },
@@ -904,13 +944,15 @@ let tT;
 function toast(t) { const e = $('#toast'); e.textContent = t; e.classList.add('on'); clearTimeout(tT); tT = setTimeout(() => e.classList.remove('on'), 2200); }
 
 /* ---------- Sekmeler ---------- */
-document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => showView(b.dataset.v));
+document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => { if (b.dataset.v === 'hidrolik' && hydMounted && $('#v-hidrolik').classList.contains('on')) TornalyHydraulic.menu(); showView(b.dataset.v); });
+let hydMounted = false;
 function showView(v) {
   document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.v === v));
   document.querySelectorAll('section.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
   if (v === 'teklif') renderQuote();
   if (v === 'gecmis') renderHistory();
   if (v === 'hesap') viewer.resize();
+  if (v === 'hidrolik' && window.TornalyHydraulic && !hydMounted) { hydMounted = true; TornalyHydraulic.mount($('#hydRoot')); }
   window.scrollTo(0, 0);
 }
 
@@ -918,6 +960,8 @@ function showView(v) {
 const isDrawingImage = f => !/\.(dxf|svg|dwg|stl|step|stp|txt)$/i.test(f.name) && (/\.(pdf|jpe?g|png|webp|gif|bmp)$/i.test(f.name) || /^(image\/(jpe?g|png|webp|gif|bmp)|application\/pdf)/i.test(f.type || ''));
 $('#dxfIn').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
+  if (window.TornalyModel3D && TornalyModel3D.exts.test(f.name)) { e.target.value = ''; return load3D(f); }
+  if (/\.(sldprt|sldasm|slddrw|ipt|iam|catpart|catproduct|x_t|x_b|f3d|par|asm|prt)$/i.test(f.name)) { e.target.value = ''; return failLoad('Bu, çizim programının kendi dosyası; telefonda açılamaz. Programda "Farklı kaydet" ile STEP (.step) ya da STL olarak kaydedip o dosyayı seçin. SolidWorks: Dosya → Farklı Kaydet → STEP AP214 (*.step).'); }
   if (isDrawingImage(f)) { e.target.value = ''; return /pdf$/i.test(f.name) || f.type === 'application/pdf' ? loadPDF(f) : showImageRef(f); }
   const r = new FileReader();
   r.onload = () => loadFile(r.result, f.name);
@@ -1542,6 +1586,38 @@ function buildQuick() {
   state.geoSig = ''; recompute();
 }
 
+/* ---------- 3B model (STL, OBJ, 3MF, STEP, IGES) ---------- */
+async function load3D(f) {
+  setSrc('file', true); hideAIBox(); state.pieces = null; state.part = null;
+  $('#layerBox').hidden = true; $('#scaleBox').hidden = true;
+  busyMsg('3B model okunuyor…');
+  let m;
+  try { m = await TornalyModel3D.load(f, () => busyMsg('STEP/IGES okunuyor… İlk kullanımda okuyucu iner (~8 MB), sonra internetsiz çalışır.')); }
+  catch (err) { return failLoad(err.message || '3B model okunamadı.'); }
+  const I = m.info, s = I.sorted, name = f.name.replace(/\.[^.]+$/, '');
+  const fill = I.V / Math.max(1e-9, s[0] * s[1] * s[2]);
+  let proc = 'freze';
+  if (s[2] <= 25 && s[2] <= 0.15 * s[1] && fill > 0.6) proc = 'sac';
+  else if (I.turn.round < 0.03 && I.turn.cover >= 0.75 && I.V / I.turn.env > 0.3) proc = 'torna';
+  state.part = { kind: 'mesh', pos: m.pos, info: I, area: I.V, perimeter: I.S, bb: { w: s[0], h: s[1], x0: 0, x1: s[0], y0: 0, y1: s[1] }, holes: [], outer: [] };
+  state.fileName = name;
+  const msgs = [['ok', `${name}: 3B model, hacim ${fmt(I.V / 1000, 1)} cm³, dış ölçü ${fmt(s[0], 1)} × ${fmt(s[1], 1)} × ${fmt(s[2], 1)} mm${I.genus ? `, ${I.genus} delik` : ''}`]];
+  if (m.bodies > 1 || I.shells > 1) msgs.push(['warn', `Dosyada ${Math.max(m.bodies, I.shells)} ayrı gövde var; hepsi birlikte hesaplandı. Montajsa parçaları ayrı ayrı kaydedin.`]);
+  if (I.open) msgs.push(['warn', `Model tam kapalı değil (${I.open} açık kenar); hacim yaklaşık olabilir.`]);
+  if (proc !== state.proc) { msgs.push(['warn', `İşlem otomatik "${PROC_NAME[proc]}" seçildi; değilse aşağıdan değiştirin.`]); setProc(proc, true); }
+  state.fileMsgs = msgs.slice(1);
+  showMsgs(msgs); renderGeoFields();
+  setPartName(name);
+  state.geoSig = ''; recompute();
+}
+function meshGeo(part, p, P) {
+  const I = part.info, s = I.sorted;
+  if (p === 'torna' || (p === 'dokum' && P.shape === 'rev')) return { kind: 'rev', mesh: part, V: I.V, S: I.S, maxD: I.turn.D, length: I.turn.L };
+  const flat = I.V / Math.max(1e-9, s[0] * s[1] * s[2]) > 0.6;
+  const t = p === 'sac' && !flat ? Math.max(0.1, P.t) : s[2], A = I.V / t, Pm = Math.max(0, (I.S - 2 * A) / t);
+  return { kind: 'ext', mesh: part, V: I.V, S: I.S, A, P: Pm, t, w: s[0], h: s[1], pierces: I.genus + 1, bent: p === 'sac' && !flat };
+}
+
 /* ---------- Çiz: parametrik çizimden parça ---------- */
 let sk = null;
 function sketchInit() {
@@ -1667,6 +1743,9 @@ function sesKomut(raw) {
     const r = sk.voice(t); if (r) return r;
   }
   // gezinme
+  if (/(^|\s)hidrolik/.test(t) && t.split(' ').length <= 3) { showView('hidrolik'); return 'Hidrolik açıldı'; }
+  const HV = [[/silindir (hesab|tasar)/, 'silindir'], [/hortum seç|hortum hesab/, 'hortum'], [/kaldırma kapasite/, 'kaldirma'], [/revizyon/, 'revizyon'], [/hortum imalat|hortum teklif/, 'hortumImalat'], [/kova (imalat|teklif)/, 'kova'], [/basınç test|test rapor/, 'test'], [/bakım kayd/, 'bakim'], [/birim çevir/, 'birim'], [/arıza/, 'ariza']];
+  for (const [re, id] of HV) if (re.test(t) && window.TornalyHydraulic) { showView('hidrolik'); TornalyHydraulic.openTool(id); return 'Hidrolik: ' + id; }
   if (/teklif\s*(hazırla|oluştur|aç|göster)|(^|\s)teklife git/.test(t) || t === 'teklif') { showView('teklif'); return 'Teklif açıldı'; }
   if (has(t, 'geçmiş')) { showView('gecmis'); return 'Geçmiş açıldı'; }
   if (has(t, 'ayarlar')) { showView('ayar'); return 'Ayarlar açıldı'; }
@@ -1775,6 +1854,12 @@ function renderGeoFields() {
     h = `<small>Parça şekli</small>${segHtml('shape', [['ext', 'Prizmatik (kalınlık)'], ['rev', 'Dönel (eksenel)']])}<div style="margin-top:10px"></div>`;
     h += P.shape === 'rev' ? revBlock() : `<div class="grid">${num('t', 'Parça kalınlığı', 'mm')}</div>`;
   }
+  if (state.src === 'file' && state.part && state.part.kind === 'mesh') {
+    const note = '<p class="note">3B modelde ölçüler ve hacim modelden alınır.</p>';
+    h = p === 'sac' ? `<div class="grid">${num('t', 'Sac kalınlığı (yalnız bükümlü parçada kullanılır)', 'mm')}</div>` + note
+      : p === 'dokum' ? `<small>Parça şekli</small>${segHtml('shape', [['ext', 'Prizmatik'], ['rev', 'Dönel (eksenel)']])}` + note
+      : p === 'torna' ? '<p class="note">3B modelde dönme ekseni, modeli en dar saran silindire göre otomatik bulunur.</p>' : note;
+  }
   $('#geoFields').innerHTML = h; bindInputs($('#geoFields'));
 }
 
@@ -1792,7 +1877,8 @@ $('#matSel').onchange = () => {
   if (state.proc === 'freze') state.params.freze.mrr = +(m.mrr * 0.6).toFixed(1);
   renderProcFields(); recompute();
 };
-const curMat = () => prof.materials.find(m => m.id === state.mat[state.proc]) || prof.materials[0];
+const curMat = () => { const m = prof.materials.find(m => m.id === state.mat[state.proc]) || prof.materials[0]; return m.cur && m.cur !== 'TL' ? { ...m, price: toTL(m.price, m.cur) } : m; };
+function toTL(v, cur) { if (!cur || cur === 'TL') return v; const k = (prof.kur || DEF_PROF.kur)[cur]; return v * (k || 0); }
 
 function renderProcFields() {
   const p = state.proc; let h = '';
@@ -1814,6 +1900,7 @@ const qtys = () => { const q = $('#qtys').value.split(/[,;\s]+/).map(x => parseI
 /* ---------- Hesap ---------- */
 function makeGeo() {
   const p = state.proc, P = state.params[p], part = state.part;
+  if (part.kind === 'mesh') return meshGeo(part, p, P);
   if (p === 'torna' || (p === 'dokum' && P.shape === 'rev')) return state.src === 'quick' || state.src === 'sketch' ? Core.revolveGeo(part, 'orijin', false) : Core.revolveGeo(part, P.axis, !!P.vert);
   const geo = Core.extrudeGeo(part, Math.max(0.01, P.t));
   if (part.pockets && part.pockets.length && p !== 'sac') {
@@ -1844,7 +1931,7 @@ function recompute() {
     base = Core.costDokum(geo, mat, { ...m, cekme: mat.cekme ?? 1 }, P, R.isleme);
   }
   const res = Core.finalize(base, geo, { boya: $('#finBoya').checked, galv: $('#finGalv').checked }, prof, qtys());
-  state.res = res;
+  state.res = res; resStamp++;
 
   const facts = [
     [fmt(geo.V / 1000, 1) + ' cm³', 'Hacim'], [fmt(res.partKg, 3) + ' kg', 'Parça ağırlığı'], [fmt(geo.S / 100, 0) + ' cm²', 'Yüzey alanı'],
@@ -1910,7 +1997,12 @@ const viewer = (() => {
   function show(geo, part) {
     clear();
     let g, extra = [];
-    if (geo.kind === 'ext') {
+    if (geo.mesh) {
+      const src = geo.mesh.pos, c = geo.mesh.info.center, arr = new Float32Array(src.length);
+      for (let i = 0; i < src.length; i += 3) { arr[i] = src[i] - c[0]; arr[i + 1] = src[i + 1] - c[1]; arr[i + 2] = src[i + 2] - c[2]; }
+      g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+      g.rotateX(-Math.PI / 2);
+    } else if (geo.kind === 'ext') {
       const cx = (part.bb.x0 + part.bb.x1) / 2, cy = (part.bb.y0 + part.bb.y1) / 2;
       const v2 = pts => pts.map(([x, y]) => new THREE.Vector2(x - cx, y - cy));
       // Cepler varsa parça, cep derinliklerinde katmanlara bölünerek kurulur (üst katmanlarda cep boşluğu açık)
@@ -1974,11 +2066,12 @@ const viewer = (() => {
 
 /* ---------- Teklif ---------- */
 const PROC_NAME = { sac: 'Sac / lazer kesim', torna: 'Torna', freze: 'Freze', dokum: 'Döküm' };
-let quote = null;
+let quote = null, resStamp = 0;
 ['#qCust', '#qPart', '#qValid', '#qLead', '#qNote'].forEach(s => $(s).addEventListener('input', () => renderQuoteDoc()));
 ['#qBreak', '#qShot'].forEach(s => $(s).addEventListener('change', () => renderQuoteDoc()));
 
 function renderQuote() {
+  if (quote && quote.ext && quote.stamp === resStamp) { $('#quoteEmpty').hidden = true; $('#quoteForm').hidden = false; renderQuoteDoc(); return; }
   if (!state.res) { $('#quoteEmpty').hidden = false; $('#quoteForm').hidden = true; $('#quoteDoc').innerHTML = ''; quote = null; return; }
   $('#quoteEmpty').hidden = true; $('#quoteForm').hidden = false;
   const now = new Date(), pad = n => String(n).padStart(2, '0');
@@ -2002,12 +2095,13 @@ function quoteHTML(q, opt) {
     <div class="meta">
       <div>Müşteri<br><b>${esc(q.cust || '-')}</b></div><div>Parça<br><b>${esc(q.part || '-')}</b></div>
       <div>İşlem<br><b>${esc(q.proc)}</b></div><div>Malzeme<br><b>${esc(q.mat)}</b></div>
-      <div>Ölçü<br><b>${esc(q.dims)}</b></div><div>Birim ağırlık<br><b>${fmt(q.partKg, 3)} kg</b></div>
+      ${q.meta ? q.meta.map(([a, b]) => `<div>${esc(a)}<br><b>${esc(b)}</b></div>`).join('') : `<div>Ölçü<br><b>${esc(q.dims)}</b></div><div>Birim ağırlık<br><b>${fmt(q.partKg, 3)} kg</b></div>`}
     </div>
     ${opt.shot && q.shot ? `<img class="shot" src="${q.shot}" alt="Parçanın 3B görünüşü">` : ''}
     <div class="tw" style="margin-top:12px"><table><thead><tr><th>Adet</th><th>Birim fiyat</th><th>Tutar</th><th>KDV %${q.vatPct}</th><th>Toplam</th></tr></thead><tbody>
       ${q.rows.map(r => `<tr><td>${r.q}</td><td>${tl(r.unit)}</td><td>${tl(r.total)}</td><td>${tl(r.vat)}</td><td><b>${tl(r.total + r.vat)}</b></td></tr>`).join('')}
     </tbody></table></div>
+    ${q.kind === 'hyd' && !opt.breakdown ? `<h3>Yapılacak işler</h3><ul style="margin:4px 0;padding-left:20px;font-size:.9rem">${q.lines.map(([n]) => `<li>${esc(n.replace(/\s*\([^)]*\)\s*$/, ''))}</li>`).join('')}</ul>` : ''}
     ${opt.breakdown ? `<h3>Maliyet dökümü (1 parça, gider ve kâr hariç)</h3><table><tbody>${q.lines.concat(q.batch.map(([n, v]) => [n + ' (parti başı)', v])).map(([n, v]) => `<tr><td>${esc(n)}</td><td>${tl(v)}</td></tr>`).join('')}</tbody></table>` : ''}
     <div class="foot">
       ${q.lead ? `Teslim süresi: ${esc(q.lead)}<br>` : ''}
@@ -2034,13 +2128,38 @@ $('#bPrint').onclick = () => {
   if (EMBED) { toast('PDF için uygulamayı kendi bağlantısından (GitHub) açın'); return; }
   window.print();
 };
-function ask(msg) {
+function ask(msg, input) {
   return new Promise(res => {
     $('#askMsg').textContent = msg; $('#askBox').hidden = false;
-    const done = v => { $('#askBox').hidden = true; res(v); };
+    const inp = $('#askIn'); inp.hidden = input === undefined;
+    if (input !== undefined) { inp.value = input.v ?? ''; inp.type = input.num ? 'number' : 'text'; inp.inputMode = input.num ? 'decimal' : 'text'; setTimeout(() => inp.focus(), 50); }
+    $('#askYes').textContent = input !== undefined ? 'Tamam' : 'Evet';
+    const done = v => { $('#askBox').hidden = true; inp.hidden = true; res(input === undefined ? v : (v ? inp.value : null)); };
     $('#askYes').onclick = () => done(true); $('#askNo').onclick = () => done(false);
+    inp.onkeydown = e => { if (e.key === 'Enter') done(true); };
   });
 }
+
+/* ---------- Diğer modüller için ortak arayüz (Hidrolik, Kaldırma) ---------- */
+function printDoc(html) {
+  if (EMBED) { toast('PDF için uygulamayı kendi bağlantısından (GitHub) açın'); return; }
+  $('#hydPrint').innerHTML = html; document.body.classList.add('print-hyd');
+  const end = () => { document.body.classList.remove('print-hyd'); $('#hydPrint').innerHTML = ''; window.removeEventListener('afterprint', end); };
+  window.addEventListener('afterprint', end);
+  setTimeout(() => { window.print(); setTimeout(() => { if (document.body.classList.contains('print-hyd') && !matchMedia('print').matches) end(); }, 1500); }, 60);
+}
+function openQuote(q) {
+  $('#qCust').value = q.cust || ''; $('#qPart').value = q.part || ''; $('#qValid').value = q.valid || 15; $('#qLead').value = q.lead || ''; $('#qNote').value = q.note || '';
+  $('#qBreak').checked = !!q.breakdown; $('#qShot').checked = q.showShot !== undefined ? q.showShot !== false : !!q.shot;
+  quote = Object.assign(q, { ext: true, stamp: resStamp });
+  showView('teklif');
+}
+window.TornalyHost = {
+  fmt, tl, esc, toast, ask, showView, openQuote, printDoc, toTL,
+  askNum: async (m, d) => { const v = await ask(m, { v: d, num: true }); return v === null ? NaN : parseFloat(String(v).replace(',', '.')); },
+  askText: async (m, d) => { const v = await ask(m, { v: d }); return v === null ? '' : String(v).trim(); },
+  store, prof: () => prof
+};
 $('#bShare').onclick = async () => {
   if (!quote) return;
   const text = quoteText(quote);
@@ -2055,7 +2174,7 @@ $('#bShare').onclick = async () => {
 $('#bSave').onclick = () => {
   if (!quote) return;
   const h = store.get('history', []);
-  const rec = { ...quote, breakdown: $('#qBreak').checked, showShot: $('#qShot').checked, firm: { firma: prof.firma, tel: prof.tel, mail: prof.mail, adres: prof.adres, logo: prof.logo } };
+  const rec = { ...quote, ext: false, status: 'bekliyor', saved: new Date().toISOString(), breakdown: $('#qBreak').checked, showShot: $('#qShot').checked, firm: { firma: prof.firma, tel: prof.tel, mail: prof.mail, adres: prof.adres, logo: prof.logo } };
   h.unshift(rec);
   let ok = store.set('history', h.slice(0, 60));
   if (!ok) { rec.shot = ''; ok = store.set('history', h.slice(0, 40)); }
@@ -2064,12 +2183,37 @@ $('#bSave').onclick = () => {
 
 /* ---------- Geçmiş ---------- */
 $('#hSearch').oninput = () => renderHistory();
+$('#hFilt').onchange = () => renderHistory();
+const ST = { bekliyor: 'Bekliyor', onay: 'Onaylandı', red: 'Reddedildi' };
+function recMonth(r) { const d = r.saved ? new Date(r.saved) : (() => { const m = /^(\d+)\.(\d+)\.(\d+)/.exec(r.date || ''); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : new Date(NaN); })(); return isNaN(d) ? '' : d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+function renderSummary(h) {
+  if (!h.length) { $('#hSum').innerHTML = ''; return; }
+  const now = new Date(), cur = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  const months = [...new Set(h.map(recMonth).filter(Boolean))].sort().reverse().slice(0, 6);
+  const sum = m => { const o = { n: 0, bekliyor: [0, 0], onay: [0, 0], red: [0, 0] }; h.filter(r => recMonth(r) === m).forEach(r => { const s = r.status || 'bekliyor', t = (r.rows[0] || {}).total || 0; o.n++; o[s][0]++; o[s][1] += t; }); return o; };
+  const sel = $('#hSum').dataset.m && months.includes($('#hSum').dataset.m) ? $('#hSum').dataset.m : (months.includes(cur) ? cur : months[0]);
+  const o = sum(sel), dec = o.onay[0] + o.red[0];
+  const ay = m => { const [y, mo] = m.split('-'); return new Date(+y, +mo - 1, 1).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' }); };
+  $('#hSum').innerHTML = `<div class="row" style="align-items:center"><b>Aylık özet</b><select id="hMon" class="qst">${months.map(m => `<option value="${m}"${m === sel ? ' selected' : ''}>${ay(m)}</option>`).join('')}</select></div>
+    <div class="msum"><div>Teklif<b>${o.n}</b></div><div>Bekliyor<b>${o.bekliyor[0]} · ${tl(o.bekliyor[1])}</b></div><div>Onaylandı<b style="color:var(--steel)">${o.onay[0]} · ${tl(o.onay[1])}</b></div><div>Reddedildi<b>${o.red[0]} · ${tl(o.red[1])}</b></div><div>Kazanma oranı<b>${dec ? '%' + fmt(o.onay[0] / dec * 100, 0) : '–'}</b></div></div>`;
+  $('#hMon').onchange = () => { $('#hSum').dataset.m = $('#hMon').value; renderSummary(h); };
+}
 function renderHistory() {
-  const h = store.get('history', []), q = $('#hSearch').value.toLocaleLowerCase('tr');
-  const list = h.map((r, i) => [r, i]).filter(([r]) => !q || (r.cust + ' ' + r.part + ' ' + r.no).toLocaleLowerCase('tr').includes(q));
-  $('#histList').innerHTML = list.length ? list.map(([r, i]) => `<li><div><b>${esc(r.part || 'Adsız parça')}</b><br><small>${esc(r.cust || '-')} · ${r.date} · ${esc(r.mat)}</small><br>${r.rows[0].q} adet: ${tl(r.rows[0].unit)}</div>
-    <div class="row" style="flex-wrap:nowrap"><button class="btn" data-open="${i}">Aç</button><button class="btn ghost" data-del="${i}" aria-label="Sil">Sil</button></div></li>`).join('')
-    : `<li><span class="muted">${h.length ? 'Aramaya uyan teklif yok.' : 'Kaydedilen teklifler burada listelenir.'}</span></li>`;
+  const h = store.get('history', []), q = $('#hSearch').value.toLocaleLowerCase('tr'), fs = $('#hFilt').value;
+  renderSummary(h);
+  const list = h.map((r, i) => [r, i]).filter(([r]) => (!q || (r.cust + ' ' + r.part + ' ' + r.no).toLocaleLowerCase('tr').includes(q)) && (!fs || (r.status || 'bekliyor') === fs));
+  $('#histList').innerHTML = list.length ? list.map(([r, i]) => `<li><div><b>${esc(r.part || 'Adsız parça')}</b><br><small>${esc(r.cust || '-')} · ${r.date} · ${esc(r.mat)}</small><br>${r.rows[0].q} adet: ${tl(r.rows[0].unit)}
+    <br><select class="qst" data-st="${i}">${Object.entries(ST).map(([k, n]) => `<option value="${k}"${(r.status || 'bekliyor') === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
+    <div class="row" style="flex-wrap:nowrap"><button class="btn" data-open="${i}">Aç</button><button class="btn" data-copy="${i}" title="Bu tekliften yeni teklif">Kopyala</button><button class="btn ghost" data-del="${i}" aria-label="Sil">Sil</button></div></li>`).join('')
+    : `<li><span class="muted">${h.length ? 'Filtreye uyan teklif yok.' : 'Kaydedilen teklifler burada listelenir.'}</span></li>`;
+  $('#histList').querySelectorAll('[data-st]').forEach(sl => sl.onchange = () => { h[+sl.dataset.st].status = sl.value; store.set('history', h); renderSummary(h); toast('Durum: ' + ST[sl.value]); });
+  $('#histList').querySelectorAll('[data-copy]').forEach(b => b.onclick = () => {
+    const r = JSON.parse(JSON.stringify(h[+b.dataset.copy])), now = new Date(), pad = n => String(n).padStart(2, '0');
+    r.no = `T-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`; r.date = now.toLocaleDateString('tr-TR');
+    delete r.status; delete r.saved; delete r.firm;
+    openQuote(r);
+    toast('Kopya açıldı: müşteri ve adetleri düzenleyip kaydedin');
+  });
   $('#histList').querySelectorAll('[data-open]').forEach(b => b.onclick = () => {
     const r = h[+b.dataset.open]; quote = r;
     showView('teklif');
@@ -2100,9 +2244,11 @@ function renderSettings() {
   $('#rateFields').innerHTML = RATE_FIELDS.map(([k, l, u]) => `<label class="f"><span>${l}</span><div class="in"><input type="number" inputmode="decimal" data-pk="${k}" value="${getP(k)}"><em>${u}</em></div></label>`).join('');
   $('#rateFields').querySelectorAll('input').forEach(i => i.oninput = () => { const v = parseFloat(i.value); if (!isNaN(v)) { setP(i.dataset.pk, v); recompute(); } });
 
-  $('#matTable').innerHTML = `<thead><tr><th>Malzeme</th><th>Yoğunluk</th><th>TL/kg</th><th>Talaş</th><th>Çekme %</th></tr></thead><tbody>` +
-    prof.materials.map((m, i) => `<tr><td>${esc(m.name)}</td><td><input data-mi="${i}" data-mk="rho" value="${m.rho}" inputmode="decimal"></td><td><input data-mi="${i}" data-mk="price" value="${m.price}" inputmode="decimal"></td><td><input data-mi="${i}" data-mk="mrr" value="${m.mrr}" inputmode="decimal"></td><td>${m.dokum ? `<input data-mi="${i}" data-mk="cekme" value="${m.cekme}" inputmode="decimal">` : ''}</td></tr>`).join('') + '</tbody>';
+  $('#matTable').innerHTML = `<thead><tr><th>Malzeme</th><th>Yoğunluk</th><th>Fiyat/kg</th><th>Para</th><th>Talaş</th><th>Çekme %</th></tr></thead><tbody>` +
+    prof.materials.map((m, i) => `<tr><td>${esc(m.name)}</td><td><input data-mi="${i}" data-mk="rho" value="${m.rho}" inputmode="decimal"></td><td><input data-mi="${i}" data-mk="price" value="${m.price}" inputmode="decimal"></td><td><select class="qst" data-mc="${i}">${['TL', 'EUR', 'USD'].map(c => `<option${(m.cur || 'TL') === c ? ' selected' : ''}>${c}</option>`).join('')}</select></td><td><input data-mi="${i}" data-mk="mrr" value="${m.mrr}" inputmode="decimal"></td><td>${m.dokum ? `<input data-mi="${i}" data-mk="cekme" value="${m.cekme}" inputmode="decimal">` : ''}</td></tr>`).join('') + '</tbody>';
   $('#matTable').querySelectorAll('input').forEach(i => i.oninput = () => { const v = parseFloat(i.value.replace(',', '.')); if (!isNaN(v)) { prof.materials[+i.dataset.mi][i.dataset.mk] = v; recompute(); } });
+  $('#matTable').querySelectorAll('[data-mc]').forEach(sl => sl.onchange = () => { prof.materials[+sl.dataset.mc].cur = sl.value; recompute(); });
+  $('#kurEUR').value = prof.kur.EUR; $('#kurUSD').value = prof.kur.USD; $('#kurTarih').textContent = 'Kur tarihi: ' + (prof.kur.date || '-');
 
   const MF = [['verim', 'Döküm verimi', '%'], ['pay', 'İşleme payı', 'mm'], ['red', 'Hurda / red', '%'], ['fire', 'Ergitme firesi', '%'], ['ergitme', 'Ergitme', 'TL/kg dökülen'], ['kalip', 'Kalıplama + maça', 'TL/adet'], ['temiz', 'Temizleme', 'TL/kg'], ['model', 'Model / kalıp', 'TL (parti)']];
   $('#methodBox').innerHTML = prof.methods.map((m, i) => `<details><summary><label class="chk" style="display:inline-flex" onclick="event.stopPropagation()"><input type="checkbox" data-on="${i}" ${m.on ? 'checked' : ''}> ${esc(m.name)}</label></summary>
@@ -2112,6 +2258,20 @@ function renderSettings() {
   document.querySelectorAll('#themeSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.t === (prof.theme || 'auto')));
 }
 ['firma', 'tel', 'mail', 'adres'].forEach(k => $('#p' + k[0].toUpperCase() + k.slice(1)).oninput = e => prof[k] = e.target.value);
+['EUR', 'USD'].forEach(c => $('#kur' + c).oninput = () => { const v = parseFloat($('#kur' + c).value.replace(',', '.')); if (v > 0) { prof.kur[c] = v; prof.kur.date = new Date().toLocaleDateString('tr-TR') + ' (elle)'; $('#kurTarih').textContent = 'Kur tarihi: ' + prof.kur.date; store.set('profile', prof); recompute(); } });
+$('#kurAl').onclick = async () => {
+  const urls = ['https://api.frankfurter.dev/v1/latest?base=EUR&symbols=TRY,USD', 'https://api.frankfurter.app/latest?from=EUR&to=TRY,USD'];
+  for (const u of urls) {
+    try {
+      const r = await fetch(u, { cache: 'no-store' }); if (!r.ok) continue;
+      const d = await r.json(), tr = d.rates && d.rates.TRY, us = d.rates && d.rates.USD;
+      if (!(tr > 0 && us > 0)) continue;
+      prof.kur = { EUR: +tr.toFixed(4), USD: +(tr / us).toFixed(4), date: new Date(d.date).toLocaleDateString('tr-TR') + ' (ECB)' };
+      store.set('profile', prof); renderSettings(); recompute(); toast('Kur güncellendi: 1 € = ' + fmt(prof.kur.EUR, 2) + ' TL'); return;
+    } catch (e) {}
+  }
+  toast('Kur alınamadı; internet bağlantısını kontrol edin ya da elle girin');
+};
 $('#pLogo').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
   const img = new Image(), rd = new FileReader();
@@ -2126,7 +2286,7 @@ $('#pLogoDel').onclick = () => { prof.logo = ''; renderSettings(); };
 $('#pSave').onclick = () => { prof.saved = true; toast(store.set('profile', prof) ? 'Ayarlar kaydedildi' : 'Kaydedilemedi'); renderSettings(); recompute(); };
 $('#pReset').onclick = async () => {
   if (!(await ask('Malzeme fiyatları, oranlar ve döküm yöntemleri varsayılana dönsün mü? Firma bilgileriniz korunur.'))) return;
-  const keep = { firma: prof.firma, tel: prof.tel, mail: prof.mail, adres: prof.adres, logo: prof.logo, theme: prof.theme };
+  const keep = { firma: prof.firma, tel: prof.tel, mail: prof.mail, adres: prof.adres, logo: prof.logo, theme: prof.theme, kur: prof.kur };
   prof = Object.assign(clone(DEF_PROF), keep); store.set('profile', prof);
   renderSettings(); renderMatSel(); renderProcFields(); recompute(); toast('Varsayılanlar yüklendi');
 };
@@ -2135,7 +2295,8 @@ function applyTheme() { if (prof.theme === 'auto') document.documentElement.remo
 
 /* ---------- Yedek / geri yükleme / silme ---------- */
 $('#bBackup').onclick = () => {
-  const data = { app: 'tornaly', v: 1, date: new Date().toISOString(), profile: prof, history: store.get('history', []) };
+  const extra = {}; try { Object.keys(localStorage).filter(k => /^tornaly\.(hyd|kal)\./.test(k)).forEach(k => { extra[k] = localStorage.getItem(k); }); } catch {}
+  const data = { app: 'tornaly', v: 2, date: new Date().toISOString(), profile: prof, history: store.get('history', []), extra };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -2153,6 +2314,7 @@ $('#bRestore').onchange = e => {
       if (d.app !== 'tornaly' || !d.profile) throw 0;
       if (!(await ask('Yedek yüklensin mi? Bu cihazdaki ayarlar ve teklif geçmişi yedektekilerle değiştirilecek.'))) return;
       store.set('profile', d.profile); store.set('history', d.history || []);
+      if (d.extra) try { Object.entries(d.extra).forEach(([k, v]) => { if (/^tornaly\.(hyd|kal)\./.test(k)) localStorage.setItem(k, v); }); } catch {}
       location.reload();
     } catch { toast('Bu dosya bir Tornaly yedeği değil'); }
   };
