@@ -34,25 +34,25 @@
       { h: 'Devrilme' },
       { k: 'M', l: 'Makine çalışma ağırlığı', u: 'kg', d: 20000 }, { k: 'a', l: 'Devrilme kenarı → makine ağırlık merkezi', u: 'm', d: 1.6, hint: 'Yatay mesafe, makinenin kendi tarafında' },
       { k: 'b', l: 'Devrilme kenarı → yük noktası', u: 'm', d: 4.5, hint: 'Yük noktası: kova pimi (ekskavatör) ya da kova yük merkezi (loder)' },
-      { k: 'Wt0', l: 'ya da katalog devrilme yükü (0 = hesapla)', u: 'kg', d: 0 },
-      { h: 'Hidrolik sınır (yükü taşıyan silindir)' },
-      { k: 'D', l: 'Piston çapı', u: 'mm', d: 120 }, { k: 'd', l: 'Mil çapı', u: 'mm', d: 85 }, { k: 'n', l: 'Silindir adedi', u: '', d: 2 },
-      { k: 'p', l: 'Tutma / emniyet basıncı', u: 'bar', d: 343 }, { k: 'yon', l: 'Silindir yükü', opts: [['push', 'İterek taşıyor (piston tarafı)'], ['pull', 'Çekerek taşıyor (mil tarafı)']], d: 'push' },
-      { k: 'rc', l: 'Silindirin pime dik kol mesafesi', u: 'm', d: 0.65, hint: 'Pim ekseninden silindir eksenine dik mesafe' },
-      { k: 'rL', l: 'Pim → yük noktası yatay mesafe', u: 'm', d: 4.3 }, { k: 'mA', l: 'Kol + bom ataşman kütlesi', u: 'kg', d: 2400 }, { k: 'xA', l: 'Pim → ataşman ağırlık merkezi yatay', u: 'm', d: 2.3 },
-      { k: 'Wh0', l: 'ya da katalog hidrolik kapasite (0 = hesapla)', u: 'kg', d: 0 },
+      { k: 'Wt0', l: 'ya da katalog devrilme yükü (0 = hesapla)', u: 'kg', d: 0, adv: 1 },
+      { h: 'Hidrolik sınır (yükü taşıyan silindir)', adv: 1 },
+      { k: 'D', l: 'Piston çapı', u: 'mm', d: 120, adv: 1 }, { k: 'd', l: 'Mil çapı', u: 'mm', d: 85, adv: 1 }, { k: 'n', l: 'Silindir adedi', u: '', d: 2, adv: 1 },
+      { k: 'p', l: 'Tutma / emniyet basıncı', u: 'bar', d: 343, adv: 1 }, { k: 'yon', l: 'Silindir yükü', opts: [['push', 'İterek taşıyor (piston tarafı)'], ['pull', 'Çekerek taşıyor (mil tarafı)']], d: 'push', adv: 1 },
+      { k: 'rc', l: 'Silindirin pime dik kol mesafesi', u: 'm', d: 0.65, hint: 'Pim ekseninden silindir eksenine dik mesafe', adv: 1 },
+      { k: 'rL', l: 'Pim → yük noktası yatay mesafe', u: 'm', d: 4.3, adv: 1 }, { k: 'mA', l: 'Kol + bom ataşman kütlesi', u: 'kg', d: 2400, adv: 1 }, { k: 'xA', l: 'Pim → ataşman ağırlık merkezi yatay', u: 'm', d: 2.3, adv: 1 },
+      { k: 'Wh0', l: 'ya da katalog hidrolik kapasite (0 = hesapla)', u: 'kg', d: 0, adv: 1 },
       { h: 'Kova' },
-      { k: 'dahil', l: 'Yukarıdaki değerler', opts: [['haric', 'Kova takılı değilken'], ['dahil', 'Katalog kovası takılıyken']], d: 'haric', wide: 1 },
+      { k: 'dahil', l: 'Devrilme / hidrolik değerleri', opts: [['haric', 'Kova takılı değilken'], ['dahil', 'Katalog kovası takılıyken']], d: 'haric', wide: 1, adv: 1 },
       { k: 'm1', l: 'Mevcut (katalog) kova + kaplin', u: 'kg', d: 900 }, { k: 'm2', l: 'Yeni kova + kaplin', u: 'kg', d: 1250 },
       { k: 'V1', l: 'Mevcut kova hacmi (tepeleme)', u: 'm³', d: 1.0 }, { k: 'V2', l: 'Yeni kova hacmi (tepeleme)', u: 'm³', d: 1.3 },
       { k: 'rho', l: 'Malzeme yoğunluğu', opts: [['1.6', 'Toprak, kuru ~1,6 t/m³'], ['1.9', 'Toprak, ıslak / kil ~1,9'], ['1.7', 'Kum, çakıl ~1,7'], ['2.0', 'Islak kum ~2,0'], ['1.8', 'Patlatılmış kaya ~1,8'], ['1.5', 'Kömür / asfalt ~1,5'], ['0.6', 'Talaş, kar ~0,6']], d: '1.7', wide: 1 },
-      { k: 'pT', l: 'Devrilme oranı', u: '%', d: '' }, { k: 'pH', l: 'Hidrolik oranı', u: '%', d: '' },
+      { h: 'Standart oranlar (boş = makine tipine göre)', adv: 1 }, { k: 'pT', l: 'Devrilme oranı', u: '%', d: '', adv: 1 }, { k: 'pH', l: 'Hidrolik oranı', u: '%', d: '', adv: 1 },
     ];
     const v0 = {}; F.forEach(x => { if (x.k) v0[x.k] = s[x.k] ?? x.d; });
     const field = x => x.h ? `<h3 style="grid-column:1/-1;margin:6px 0 0">${x.h}</h3>` : x.opts
       ? `<label class="f"${x.wide ? ' style="grid-column:1/-1"' : ''}><span>${x.l}</span><div class="in"><select data-q="${x.k}">${x.opts.map(([a, b]) => `<option value="${a}"${String(a) === String(v0[x.k]) ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select></div></label>`
       : `<label class="f"><span>${x.l}</span><div class="in"><input type="number" inputmode="decimal" data-q="${x.k}" value="${v0[x.k]}">${x.u ? `<em>${x.u}</em>` : ''}</div>${x.hint ? `<small>${x.hint}</small>` : ''}</label>`;
-    root.innerHTML = `<div class="grid">${F.map(field).join('')}</div><div id="kqOut"></div>`;
+    root.innerHTML = `<div class="grid">${F.filter(x => !x.adv).map(field).join('')}</div><details class="hyadv" style="margin-top:10px"><summary>Gelişmiş ayarlar (hidrolik sınır, katalog değerleri, oranlar)</summary><div class="grid" style="margin-top:8px">${F.filter(x => x.adv).map(field).join('')}</div></details><div id="kqOut"></div>`;
     const calc = () => {
       const v = {}; root.querySelectorAll('[data-q]').forEach(i => { v[i.dataset.q] = i.tagName === 'SELECT' ? i.value : num(i.value); });
       const st = {}; root.querySelectorAll('[data-q]').forEach(i => st[i.dataset.q] = i.value); H().store.set('kal.quick', st);
@@ -69,9 +69,13 @@
       const lim = (Wtv, Whv) => !isFinite(Whv) ? 'devrilme' : !isFinite(Wtv) ? 'hidrolik' : pT * Wtv <= pH * Whv ? 'devrilme' : 'hidrolik';
       const fit = (L, r) => !isFinite(r) ? '—' : L <= r ? `<b style="color:var(--steel)">✓ yeter</b> (%${f(L / r * 100, 0)})` : `<b style="color:var(--err)">✗ fazla</b> (%${f(L / r * 100, 0)})`;
       if (!isFinite(Wt) && !isFinite(Wh)) { $('#kqOut').innerHTML = warnP('Devrilme ya da hidrolik değerlerini girin.'); return; }
-      $('#kqOut').innerHTML = `<div class="plate" style="margin-top:12px"><div class="lbl">Bu noktada izin verilen yük (yeni kova ile)</div><div class="big">${kg(r2)}</div>
-        <div class="sub"><span>Sınırlayan: <b>${lim(Wt, Wh)}</b></span><span>Oranlar %${f(pT * 100)} / %${f(pH * 100)}</span></div></div>` +
-        `<div class="tw"><table><tbody>
+      const o_ = $('#kqOut'), wasOpen = [...o_.querySelectorAll('details')].map(d => d.open);
+      const ok2 = isFinite(r2) && L2 <= r2;
+      o_.innerHTML = `<div class="plate" style="margin-top:12px"><div class="lbl">Yeni kova ile güvenle kaldırılabilecek yük</div><div class="big">${kg(r2)}</div>
+        <div class="sub"><span>Sınırlayan: <b>${lim(Wt, Wh)}</b></span></div></div>
+        <div style="margin:8px 0"><p style="margin:6px 0;font-weight:600;color:${ok2 ? 'var(--steel)' : 'var(--err)'}">${ok2 ? '✓' : '✗'} Dolu yeni kova (${f(L2)} kg) ${ok2 ? 'bu yükün içinde kalıyor' : 'bu yükü aşıyor: daha küçük kova ya da daha hafif malzeme'}</p>
+        <p style="margin:6px 0;font-weight:600">• Bu makineye uygun en büyük kova: ${isFinite(r2) && r2 > 0 ? f(r2 / rho / 1000, 2) + ' m³' : '—'} (${f(rho, 1)} t/m³ malzemeyle)</p></div>` +
+        `<details class="hydet" style="margin-top:10px"><summary>Ayrıntılar (hesap değerleri, kova karşılaştırması)</summary><div class="tw"><table><tbody>
         <tr><td>Devrilme yükü (kovasız)</td><td>${kg(Wt + base)}</td></tr>
         <tr><td>Hidrolik kapasite (kovasız)</td><td>${kg(Wh + base)}</td></tr></tbody></table></div>
         <h3>Kova değişiminin etkisi</h3><div class="tw"><table><thead><tr><th></th><th>Mevcut kova</th><th>Yeni kova</th></tr></thead><tbody>
@@ -81,7 +85,8 @@
         <tr><td>Uygunluk</td><td>${fit(L1, r1)}</td><td>${fit(L2, r2)}</td></tr>
         <tr><td>En büyük uygun kova hacmi</td><td>${isFinite(r1) && r1 > 0 ? f(r1 / rho / 1000, 2) + ' m³' : '—'}</td><td>${isFinite(r2) && r2 > 0 ? f(r2 / rho / 1000, 2) + ' m³' : '—'}</td></tr>
         </tbody></table></div>
-        <p class="note">Kova ağırlık merkezinin yük noktasına yakın olduğu kabul edilmiştir. Hesap yalnızca girilen tek konum içindir; makine kolunu uzattıkça kapasite düşer. Tam tablo için "Mekanizma" bölümünü kullanın. Yük tablosu ve emniyet kararları için üreticinin yük tablosu esastır.</p>`;
+        </details><p class="note">Kova ağırlık merkezinin yük noktasına yakın olduğu kabul edilmiştir. Hesap yalnızca girilen tek konum içindir; makine kolunu uzattıkça kapasite düşer. Tam tablo için "Mekanizma" bölümünü kullanın. Yük tablosu ve emniyet kararları için üreticinin yük tablosu esastır.</p>`;
+      o_.querySelectorAll('details').forEach((d, i) => { if (wasOpen[i]) d.open = true; });
     };
     root.querySelectorAll('[data-q]').forEach(i => { i.oninput = calc; i.onchange = calc; });
     calc();
@@ -246,7 +251,7 @@
       R(-2.75, 1.2, 3.25, 1.05, Y_, 0.15), R(-2.85, 1.15, 0.85, 1.0, D, 0.2), R(-0.6, 2.25, 0.95, 1.05, Y_, 0.08), R(-0.48, 2.4, 0.7, 0.75, Gl, 0.05)];
     if (tip === 'bekoArka') return [R(-3.6, 0.55, 4.5, 0.9, Y_, 0.15), R(-2.0, 1.45, 1.7, 1.45, Y_, 0.08), R(-1.85, 1.6, 1.4, 1.1, Gl, 0.05), R(-3.7, 0.6, 0.35, 0.5, D),
       C(-2.4, 0.5, 0.5, D), C(-2.4, 0.5, 0.25, G), C(0, 0.65, 0.65, D), C(0, 0.65, 0.3, G), R(0.8, 0.95, 0.75, 0.85, D, 0.08), Pg([[0.85, 1.1], [1.0, 1.1], [M.xe + 0.15, 0], [M.xe - 0.15, 0]], D)];
-    if (tip === 'bekoOn') return [R(-2.8, 0.55, 3.6, 0.9, Y_, 0.15), R(-1.9, 1.45, 1.6, 1.45, Y_, 0.08), R(-1.75, 1.6, 1.3, 1.1, Gl, 0.05),
+    if (tip === 'bekoOn') return [R(-0.6, 0.9, 0.5, 1.35, D, 0.06), R(-2.8, 0.55, 3.6, 0.9, Y_, 0.15), R(-1.9, 1.45, 1.6, 1.45, Y_, 0.08), R(-1.75, 1.6, 1.3, 1.1, Gl, 0.05),
       C(0, 0.5, 0.5, D), C(0, 0.5, 0.25, G), C(-2.2, 0.65, 0.65, D), C(-2.2, 0.65, 0.3, G)];
     if (tip === 'loderL' || tip === 'loderP') return [R(-4.6, 0.7, 4.0, 1.25, Y_, 0.2), R(-4.75, 0.75, 0.45, 1.1, D, 0.15), R(-2.4, 1.95, 1.5, 1.55, Y_, 0.08), R(-2.25, 2.1, 1.2, 1.2, Gl, 0.05),
       R(-0.95, 0.9, 0.9, 1.9, D, 0.05), C(0, 0.8, 0.8, D), C(0, 0.8, 0.38, G), C(-3.1, 0.8, 0.8, D), C(-3.1, 0.8, 0.38, G)];
@@ -278,13 +283,36 @@
       for (const p of pts) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); }
       for (const p of pts.reverse()) { while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop(); up.push(p); }
       return lo.slice(0, -1).concat(up.slice(0, -1)); };
-    const isBucket = b => /kova|sepet/i.test(b.ad), bw = Math.max(5, 0.22 * k);
+    const isBucket = b => /kova/i.test(b.ad), bw = Math.max(6, 0.26 * k), loaderLike = ['loderL', 'loderP', 'bekoOn'].includes(M.tip);
+    const poly = (pts, fill, stroke = '#1c2830', sw = 1.2) => `<polygon points="${pts.map(p => X(p[0]) + ',' + Y(p[1])).join(' ')}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>`;
     M.bodies.forEach(b => {
-      const q = b.p.map(id => P[M.idx[id]]), h = hull(q);
-      const fill = isBucket(b) ? '#3a4249' : /bağlantı|rocker|kol \(/i.test(b.ad) ? '#55606a' : '#f2b705';
-      if (h.length === 2) s += `<line x1="${X(h[0][0])}" y1="${Y(h[0][1])}" x2="${X(h[1][0])}" y2="${Y(h[1][1])}" stroke="${fill}" stroke-width="${(bw * 0.55).toFixed(1)}" stroke-linecap="round"/>`;
-      else s += `<polygon points="${h.map(p => X(p[0]) + ',' + Y(p[1])).join(' ')}" fill="${fill}" stroke="${fill}" stroke-width="${bw.toFixed(1)}" stroke-linejoin="round"/><polygon points="${h.map(p => X(p[0]) + ',' + Y(p[1])).join(' ')}" fill="none" stroke="#1c2830" stroke-opacity=".35" stroke-width="1"/>`;
+      const q = b.p.map(id => P[M.idx[id]]);
+      if (isBucket(b)) { // gerçek kova kesiti: pim → diş ekseninde yerel çerçeve
+        const pin = q[0], tipI = b.p.indexOf('Y'), tip = q[tipI >= 0 ? tipI : q.length - 1], k1 = q[1];
+        const ex = [tip[0] - pin[0], tip[1] - pin[1]], len = Math.hypot(ex[0], ex[1]) || 1, e1 = [ex[0] / len, ex[1] / len];
+        const sg = Math.sign(e1[0] * (k1[1] - pin[1]) - e1[1] * (k1[0] - pin[0])) || 1, e2 = [-e1[1] * sg, e1[0] * sg];
+        const W_ = (u, v) => [pin[0] + (u * e1[0] + v * e2[0]) * len, pin[1] + (u * e1[1] + v * e2[1]) * len];
+        const shell = loaderLike ? [[-0.1, 0.95], [-0.22, 0.6], [-0.22, 0.25], [-0.12, 0.02], [0.05, -0.08], [0.45, -0.09], [1.0, 0], [0.98, 0.09], [0.6, 0.55], [0.15, 0.95]] : [[-0.1, -0.12], [0.02, 0.25], [0.28, 0.46], [0.62, 0.47], [0.88, 0.26], [1.0, 0]];
+        s += poly(shell.map(([u, v]) => W_(u, v)), '#3a4249', '#1c2830', 1.4);
+        s += poly([[1.0, 0], [1.13, -0.03], [0.97, -0.07]].map(([u, v]) => W_(u, v)), '#8a99a3');
+        const ctr = loaderLike ? W_(0.25, 0.3) : W_(0.5, 0.2);
+        s += `<text x="${X(ctr[0])}" y="${+Y(ctr[1]) + 3}" font-size="10" font-weight="700" text-anchor="middle" fill="#fff">Kova</text>`;
+        return;
+      }
+      if (q.length === 2) { s += `<line x1="${X(q[0][0])}" y1="${Y(q[0][1])}" x2="${X(q[1][0])}" y2="${Y(q[1][1])}" stroke="#55606a" stroke-width="${(bw * 0.45).toFixed(1)}" stroke-linecap="round"/>`; return; }
+      // kiriş: pivot → dirsek → uç; silindir kulakları ince plaka olarak
+      const piv = q[0], far = q.reduce((m, p) => Math.hypot(p[0] - piv[0], p[1] - piv[1]) > Math.hypot(m[0] - piv[0], m[1] - piv[1]) ? p : m, q[0]);
+      const ch = [far[0] - piv[0], far[1] - piv[1]], cl = Math.hypot(ch[0], ch[1]) || 1;
+      const off = p => ((p[0] - piv[0]) * ch[1] - (p[1] - piv[1]) * ch[0]) / cl;
+      const knee = q.filter(p => p !== piv && p !== far).reduce((m, p) => (m && Math.abs(off(m)) >= Math.abs(off(p))) ? m : p, null);
+      const path = knee && Math.abs(off(knee)) > cl * 0.08 ? [piv, knee, far] : [piv, far];
+      const isRocker = /rocker|kol \(/i.test(b.ad), col = isRocker ? '#55606a' : '#f2b705', w = isRocker ? bw * 0.55 : bw;
+      s += poly(hull(q), isRocker ? '#55606a' : '#d9a404', '#1c2830', 0.8).replace('<polygon', '<polygon opacity=".55"');
+      const d = path.map((p, i) => (i ? 'L' : 'M') + X(p[0]) + ' ' + Y(p[1])).join(' ');
+      s += `<path d="${d}" fill="none" stroke="#1c2830" stroke-width="${(w + 2.4).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${col}" stroke-width="${w.toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>`;
     });
+    // sepetli platform: sepet (her konumda düz durur)
+    if (M.tip === 'platform') { const T = P[M.idx[M.load]]; s += `<rect x="${+X(T[0]) - 0.6 * k}" y="${Y(T[1] + 1.05)}" width="${1.2 * k}" height="${1.05 * k}" fill="none" stroke="#1c2830" stroke-width="1.6"/><rect x="${+X(T[0]) - 0.6 * k}" y="${Y(T[1] + 0.35)}" width="${1.2 * k}" height="${0.35 * k}" fill="#e6ebee" stroke="#1c2830"/><line x1="${+X(T[0]) - 0.6 * k}" y1="${Y(T[1] + 0.7)}" x2="${+X(T[0]) + 0.6 * k}" y2="${Y(T[1] + 0.7)}" stroke="#1c2830"/>`; }
     // silindirler: gövde (koyu) + krom mil
     M.cyls.forEach((c, ci) => {
       const a = P[M.idx[c.a]], b = P[M.idx[c.b]], Ln = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, u = [(b[0] - a[0]) / Ln, (b[1] - a[1]) / Ln];
@@ -297,7 +325,7 @@
     M.pts.forEach((p, i) => { const q = P[i]; s += `<circle cx="${X(q[0])}" cy="${Y(q[1])}" r="${p.g ? 3.4 : 2.6}" fill="#e6ebee" stroke="#1c2830" stroke-width="1.2"/>`;
       if (opts.labels) s += `<text x="${+X(q[0]) + 5}" y="${+Y(q[1]) - 5}" font-size="9" fill="#1c2830">${esc(p.id)}</text>`; });
     // parça adları
-    if (!opts.pts) M.bodies.filter(b => b.p.length > 2 && !/rocker|bağlantı/i.test(b.ad)).forEach(b => { const c = centroid(M, P, b); s += `<text x="${X(c[0])}" y="${+Y(c[1]) + 3}" font-size="10" font-weight="700" text-anchor="middle" fill="#1c2830" stroke="#fff" stroke-width="3" paint-order="stroke">${esc(b.ad.replace(/ \(.*\)/, ''))}</text>`; });
+    if (!opts.pts) M.bodies.filter(b => b.p.length > 2 && !/rocker|bağlantı|kova/i.test(b.ad)).forEach(b => { const c = centroid(M, P, b); s += `<text x="${X(c[0])}" y="${+Y(c[1]) + 3}" font-size="10" font-weight="700" text-anchor="middle" fill="#1c2830" stroke="#fff" stroke-width="3" paint-order="stroke">${esc(b.ad.replace(/ \(.*\)/, ''))}</text>`; });
     // devrilme noktası
     s += `<path d="M${X(M.xe)} ${Y(0)} l-6 10 h12z" fill="#a3262a"/>`;
     if (!opts.pts) s += `<text x="${X(M.xe)}" y="${+Y(0) + 20}" font-size="9" text-anchor="middle" fill="#1c2830" stroke="#c9b79a" stroke-width="3" paint-order="stroke">devrilme noktası</text>`;
@@ -334,7 +362,7 @@
   }
   function sliders() {
     $('#kmSl').innerHTML = M.cyls.map((c, k) => `<label class="f" style="margin-top:6px"><span>${esc(c.ad)} — <b data-sv="${k}"></b></span><input type="range" min="0" max="1000" value="${Math.round(ext[k] * 1000)}" data-sl="${k}" style="width:100%"></label>`).join('') +
-      `<div class="grid" style="margin-top:6px"><label class="f"><span>Devrilme oranı</span><div class="in"><input type="number" inputmode="decimal" id="kmPT" value="${f(pT * 100)}"><em>%</em></div></label><label class="f"><span>Hidrolik oranı</span><div class="in"><input type="number" inputmode="decimal" id="kmPH" value="${f(pH * 100)}"><em>%</em></div></label></div>`;
+      `<details class="hyadv" style="margin-top:8px"><summary>Standart oranlar</summary><div class="grid" style="margin-top:6px"><label class="f"><span>Devrilme oranı</span><div class="in"><input type="number" inputmode="decimal" id="kmPT" value="${f(pT * 100)}"><em>%</em></div></label><label class="f"><span>Hidrolik oranı</span><div class="in"><input type="number" inputmode="decimal" id="kmPH" value="${f(pH * 100)}"><em>%</em></div></label></div></details>`;
     $('#kmSl').querySelectorAll('[data-sl]').forEach(i => i.oninput = () => { ext[+i.dataset.sl] = i.value / 1000; draw(); });
     $('#kmSl').querySelectorAll('[data-sl]').forEach(i => i.onchange = saveM);
     $('#kmPT').oninput = () => { const v = num($('#kmPT').value); if (ok(v)) { pT = v / 100; draw(); saveM(); } };
@@ -349,11 +377,13 @@
     lastX = R.S.X; lastL = ls;
     $('#kmSvg').innerHTML = svg(R.P, { lim: R.rated === pH * R.Wh ? R.lim : -1, labels: $('#kmLab') && $('#kmLab').checked, rated: R.rated });
     const limBy = pT * R.Wt <= pH * R.Wh ? 'devrilme' : 'hidrolik: ' + M.cyls[R.lim].ad.toLowerCase();
-    $('#kmOut').innerHTML = `<div class="plate" style="margin-top:10px"><div class="lbl">İzin verilen yük (bu konumda, ${esc(M.load)} noktasında)</div><div class="big">${kg(R.rated)}</div>
-      <div class="sub"><span>Yarıçap <b>${f(R.L[0], 2)} m</b></span><span>Yükseklik <b>${f(R.L[1], 2)} m</b></span><span>Sınırlayan <b>${esc(limBy)}</b></span></div></div>
-      <div class="tw"><table><tbody><tr><td>Devrilme yükü</td><td>${kg(R.Wt)} → %${f(pT * 100)}: ${kg(pT * R.Wt)}</td></tr>
+    const wasOpen = !!($('#kmOut details') && $('#kmOut details').open);
+    $('#kmOut').innerHTML = `<div class="plate" style="margin-top:10px"><div class="lbl">Bu konumda güvenle kaldırılabilecek yük</div><div class="big">${kg(R.rated)}</div>
+      <div class="sub"><span>Yatay <b>${f(R.L[0], 2)} m</b></span><span>Yükseklik <b>${f(R.L[1], 2)} m</b></span></div></div>
+      <p style="margin:8px 0;font-weight:600">• ${limBy === 'devrilme' ? 'Sınırı makinenin devrilmesi belirliyor: daha fazla yükte makine öne yatar.' : 'Sınırı ' + esc(M.cyls[R.lim].ad.toLowerCase()) + ' belirliyor: daha fazla yükü silindir tutamaz.'}</p>
+      <details class="hydet"${wasOpen ? ' open' : ''}><summary>Ayrıntılar (devrilme ve silindir değerleri)</summary><div class="tw"><table><tbody><tr><td>Devrilme yükü</td><td>${kg(R.Wt)} → %${f(pT * 100)}: ${kg(pT * R.Wt)}</td></tr>
       ${R.hyd.map((h, k) => `<tr><td>${esc(M.cyls[k].ad)} (Ø${M.cyls[k].D}/Ø${M.cyls[k].d}${M.cyls[k].n > 1 ? ' ×' + M.cyls[k].n : ''}, ${M.cyls[k].p} bar)</td><td>${isNaN(h.W) ? '—' : kg(h.W)}${isFinite(h.W) && h.W > 0 ? ` → %${f(pH * 100)}: ${kg(pH * h.W)}` : ''}<br><small>Yüksüzken silindir kuvveti ${f(Math.abs(h.need || 0) / 1000, 1)} kN ${h.need > 0 ? 'basma' : 'çekme'}</small></td></tr>`).join('')}
-      </tbody></table></div>`;
+      </tbody></table></div></details>`;
   }
   function editor() {
     const inp = (k, v, w = 70) => `<input data-e="${k}" value="${v}" inputmode="decimal" style="width:${w}px">`;

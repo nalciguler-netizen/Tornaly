@@ -53,22 +53,28 @@
 
   /* ================= Form yardımcıları ================= */
   const saved = id => H().store.get('hyd.in.' + id, {});
-  function form(id, fields, cb) {
+  function form(id, fields, cb, advTitle = 'Gelişmiş ayarlar') {
     const s = saved(id), vals = {};
-    const html = fields.map(fd => {
+    const rend = fd => {
       if (fd.h) return `<h3 style="grid-column:1/-1;margin:6px 0 0">${esc(fd.h)}</h3>`;
       if (fd.note) return `<p class="note" style="grid-column:1/-1;margin:0">${fd.note}</p>`;
       const v = s[fd.k] ?? fd.d; vals[fd.k] = fd.opts ? v : num(v);
       if (fd.opts) return `<label class="f"${fd.wide ? ' style="grid-column:1/-1"' : ''}><span>${esc(fd.l)}</span><div class="in"><select data-hk="${fd.k}">${fd.opts.map(([ov, ol]) => `<option value="${esc(ov)}"${String(ov) === String(v) ? ' selected' : ''}>${esc(ol)}</option>`).join('')}</select></div>${fd.hint ? `<small>${fd.hint}</small>` : ''}</label>`;
       if (fd.text) return `<label class="f"${fd.wide ? ' style="grid-column:1/-1"' : ''}><span>${esc(fd.l)}</span><div class="in"><input data-hk="${fd.k}" data-txt="1" value="${esc(v ?? '')}"></div></label>`;
       return `<label class="f"><span>${esc(fd.l)}</span><div class="in"><input type="number" inputmode="decimal" data-hk="${fd.k}" value="${v ?? ''}">${fd.u ? `<em>${esc(fd.u)}</em>` : ''}</div>${fd.hint ? `<small>${fd.hint}</small>` : ''}</label>`;
-    }).join('');
+    };
+    const basic = fields.filter(fd => !fd.adv).map(rend).join(''), adv = fields.filter(fd => fd.adv).map(rend).join('');
     return {
-      html: `<div class="grid">${html}</div>`,
+      html: `<div class="grid">${basic}</div>` + (adv ? `<details class="hyadv" style="margin-top:10px"><summary>${esc(advTitle)}</summary><div class="grid" style="margin-top:8px">${adv}</div></details>` : ''),
       bind(root) {
         const all = {}; fields.forEach(fd => { if (fd.k) all[fd.k] = fd; });
         const read = () => { const o = {}; root.querySelectorAll('[data-hk]').forEach(i => { const fd = all[i.dataset.hk]; o[i.dataset.hk] = fd && (fd.opts || fd.text) ? i.value : num(i.value); }); return o; };
-        const go = () => { const o = read(); const st = {}; root.querySelectorAll('[data-hk]').forEach(i => { st[i.dataset.hk] = i.value; }); H().store.set('hyd.in.' + id, st); cb(o); };
+        const go = () => {
+          const o = read(); const st = {}; root.querySelectorAll('[data-hk]').forEach(i => { st[i.dataset.hk] = i.value; }); H().store.set('hyd.in.' + id, st);
+          const out = root.querySelector('#hyOut'), open = out ? [...out.querySelectorAll('details')].map(d => d.open) : [];
+          cb(o);
+          if (out) out.querySelectorAll('details').forEach((d, i) => { if (open[i]) d.open = true; });
+        };
         root.querySelectorAll('[data-hk]').forEach(i => { i.oninput = go; i.onchange = go; });
         go();
       }
@@ -76,6 +82,10 @@
   }
   const table = (head, rows, cls = '') => `<div class="tw"><table class="${cls}">${head ? `<thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead>` : ''}<tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
   const kv = rows => table(null, rows.map(([a, b]) => [esc(a), b]));
+  const A_ = arr => arr.map(x => ({ ...x, adv: true }));
+  const card = (lbl, big, subs = []) => `<div class="plate" style="margin-top:12px"><div class="lbl">${lbl}</div><div class="big">${big}</div>${subs.length ? `<div class="sub">${subs.map(x => `<span>${x}</span>`).join('')}</div>` : ''}</div>`;
+  const chk = list => `<div style="margin:8px 0">${list.map(([g, t]) => `<p style="margin:6px 0;font-weight:600;color:${g === null ? 'var(--ink)' : g ? 'var(--steel)' : 'var(--err)'}">${g === null ? '•' : g ? '✓' : '✗'} ${t}</p>`).join('')}</div>`;
+  const det = (html, t = 'Ayrıntılar (hesap değerleri)') => `<details class="hydet" style="margin-top:10px"><summary>${t}</summary>${html}</details>`;
   const badge = (good, t) => `<b style="color:${good ? 'var(--steel)' : 'var(--err)'}">${good ? '✓' : '✗'} ${t}</b>`;
   const warnP = t => `<p class="note" style="color:var(--warn)">${t}</p>`;
   // Araçlar arası bağlantı: son silindir (ctx) ve "Sonraki adım" düğmeleri
@@ -102,12 +112,19 @@
     };
   }
 
-  /* ================= 3B (silindir) ================= */
-  let r3 = null;
-  function cyl3D(host, g) {
+  /* ================= 3B görüntüleyici (tek tuval, tüm araçlar) ================= */
+  let r3 = null, MAT = null;
+  function mats() {
+    if (MAT) return MAT;
+    const S = (c, m, r, o) => new THREE.MeshStandardMaterial(Object.assign({ color: c, metalness: m, roughness: r, side: THREE.DoubleSide }, o || {}));
+    return (MAT = { steel: S(0x8a99a3, 0.35, 0.5), chrome: S(0xdfe6ea, 0.35, 0.22), paint: S(0xf2b705, 0.2, 0.6), dark: S(0x2b3238, 0.3, 0.6), rubber: S(0x1b1f22, 0.05, 0.85),
+      brass: S(0xc9a74a, 0.8, 0.3), red: S(0xa3262a, 0.25, 0.5), oil: S(0xc98a16, 0.1, 0.3, { transparent: true, opacity: 0.55 }), shell: S(0x9fb0ba, 0.3, 0.5, { transparent: true, opacity: 0.28, depthWrite: false }) });
+  }
+  function view3D(host, build, h = 240) {
+    if (!host) return;
     if (typeof THREE === 'undefined') { host.innerHTML = '<p class="note">3B görüntü bu cihazda açılamadı.</p>'; return; }
     if (!r3) {
-      const cv = document.createElement('canvas'); cv.style.cssText = 'width:100%;height:240px;display:block;touch-action:none';
+      const cv = document.createElement('canvas'); cv.style.cssText = 'width:100%;height:240px;display:block;touch-action:none;border-radius:var(--r-s);background:linear-gradient(#eef3f6,#dfe7ec)';
       const R = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, preserveDrawingBuffer: true });
       R.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
       const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(30, 1, 1, 1e6);
@@ -119,25 +136,16 @@
       cv.addEventListener('pointermove', e => { if (!last) return; r3.th -= (e.clientX - last[0]) * 0.01; r3.ph = Math.max(0.2, Math.min(2.9, r3.ph - (e.clientY - last[1]) * 0.01)); last = [e.clientX, e.clientY]; place(); });
       cv.addEventListener('pointerup', () => { last = null; });
     }
-    host.innerHTML = ''; host.appendChild(r3.cv);
+    r3.cv.style.height = h + 'px';
+    if (r3.cv.parentNode !== host) { host.innerHTML = ''; host.appendChild(r3.cv); }
     const { scene } = r3;
     if (r3.grp) { scene.remove(r3.grp); r3.grp.traverse(o => o.geometry && o.geometry.dispose()); }
-    const grp = new THREE.Group(), mS = new THREE.MeshStandardMaterial({ color: 0x8a99a3, metalness: 0.35, roughness: 0.5 }),
-      mC = new THREE.MeshStandardMaterial({ color: 0xe6ebee, metalness: 0.9, roughness: 0.15 }), mP = new THREE.MeshStandardMaterial({ color: 0xf2b705, metalness: 0.2, roughness: 0.6 });
-    const lathe = (pts, mat) => { const m = new THREE.Mesh(new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, y)), 64), mat); return m; };
-    const { D, OD, d, Lt, ext, eye } = g;
-    // gövde (boru, dış yüzey), dip kapak ve kafa
-    grp.add(lathe([[D / 2, 0], [OD / 2, 0], [OD / 2, Lt], [D / 2, Lt]], mP));
-    grp.add(lathe([[0, -0.25 * D], [OD / 2, -0.25 * D], [OD / 2, 0], [0, 0]], mS));
-    grp.add(lathe([[d / 2, Lt], [OD / 2 * 0.97, Lt], [OD / 2 * 0.97, Lt + 0.35 * D], [d / 2, Lt + 0.35 * D]], mS));
-    grp.add(lathe([[0, Lt - 0.05 * D], [d / 2, Lt - 0.05 * D], [d / 2, Lt + 0.35 * D + ext], [0, Lt + 0.35 * D + ext]], mC));
-    // gözler
-    const eyeG = (y, w) => { const m = new THREE.Mesh(new THREE.TorusGeometry(eye * 0.75, eye * 0.45, 16, 40), mS); m.position.set(0, y, 0); m.scale.set(1, 1, w / (eye * 0.9)); return m; };
-    grp.add(eyeG(-0.25 * D - eye * 0.8, OD * 0.6));
-    grp.add(eyeG(Lt + 0.35 * D + ext + eye * 0.8, d * 0.9));
-    grp.rotation.z = -PI / 2; grp.position.x = -(Lt + ext) / 2;
-    scene.add(grp); r3.grp = grp;
-    const len = Lt + ext + 0.6 * D + 3 * eye; r3.r = len * 1.25;
+    const wrap = new THREE.Group(), grp = new THREE.Group(); wrap.add(grp);
+    const o = build(grp, mats()) || {};
+    if (o.th !== undefined && r3.view !== o.view) { r3.th = o.th; r3.ph = o.ph ?? r3.ph; r3.view = o.view; }
+    const box = new THREE.Box3().setFromObject(wrap), c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3());
+    grp.position.sub(c);
+    scene.add(wrap); r3.grp = wrap; r3.r = sz.length() / 2 / Math.sin(15 * PI / 180) * (o.fit || 1) || 1000;
     place();
   }
   function place() {
@@ -148,6 +156,145 @@
     r3.cam.lookAt(0, 0, 0); r3.R.render(r3.scene, r3.cam);
   }
   const snap3 = () => { if (!r3 || !r3.grp) return ''; r3.R.setClearColor(0xffffff, 1); r3.R.render(r3.scene, r3.cam); const u = r3.cv.toDataURL('image/jpeg', 0.8); r3.R.setClearColor(0x000000, 0); r3.R.render(r3.scene, r3.cam); return u; };
+  const lathe = (pts, mat, seg = 48) => new THREE.Mesh(new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, y)), seg), mat);
+  const along = (obj, from, dir) => { obj.position.copy(from); obj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize()); return obj; };
+
+  // Silindir
+  function cyl3D(host, g) {
+    view3D(host, (grp, M) => {
+      const { D, OD, d, Lt, ext, eye } = g;
+      grp.add(lathe([[D / 2, 0], [OD / 2, 0], [OD / 2, Lt], [D / 2, Lt]], M.paint, 64));
+      grp.add(lathe([[0, -0.25 * D], [OD / 2, -0.25 * D], [OD / 2, 0], [0, 0]], M.steel, 64));
+      grp.add(lathe([[d / 2, Lt], [OD / 2 * 0.97, Lt], [OD / 2 * 0.97, Lt + 0.35 * D], [d / 2, Lt + 0.35 * D]], M.steel, 64));
+      grp.add(lathe([[0, Lt - 0.05 * D], [d / 2, Lt - 0.05 * D], [d / 2, Lt + 0.35 * D + ext], [0, Lt + 0.35 * D + ext]], M.chrome, 64));
+      const eyeG = (y, w) => { const m = new THREE.Mesh(new THREE.TorusGeometry(eye * 0.75, eye * 0.45, 16, 40), M.steel); m.position.set(0, y, 0); m.scale.set(1, 1, w / (eye * 0.9)); return m; };
+      grp.add(eyeG(-0.25 * D - eye * 0.8, OD * 0.6)); grp.add(eyeG(Lt + 0.35 * D + ext + eye * 0.8, d * 0.9));
+      grp.rotation.z = -PI / 2;
+      return { view: 'cyl', th: 0.6, ph: 1.2, fit: 0.7 };
+    });
+  }
+  // Kova: yan profil (elips yayı + ağız), sarım sacı, yan saclar, bıçak, dişler, kulaklar
+  function kovaProfile(Ap_mm2) {
+    const pts = []; for (let i = 0; i <= 48; i++) { const t = (-55 - i * 200 / 48) * PI / 180; pts.push([Math.cos(t), 0.85 + 0.85 * Math.sin(t)]); }
+    let a = 0; for (let i = 0; i < pts.length; i++) { const [x1, y1] = pts[i], [x2, y2] = pts[(i + 1) % pts.length]; a += x1 * y2 - x2 * y1; }
+    const k = Math.sqrt(Ap_mm2 / Math.abs(a / 2)); return pts.map(([x, y]) => [x * k, y * k]);
+  }
+  function kova3D(host, g) {
+    view3D(host, (grp, M) => {
+      const { W, Ap, t1, t2, bh, t3, nd } = g, P = kovaProfile(Ap), lip = P[0], back = P[P.length - 1];
+      const shp = new THREE.Shape(P.map(([x, y]) => new THREE.Vector2(x, y)));
+      const side = new THREE.ExtrudeGeometry(shp, { depth: t2, bevelEnabled: false });
+      const s1 = new THREE.Mesh(side, M.paint); s1.position.z = W / 2; grp.add(s1);
+      const s2 = new THREE.Mesh(side, M.paint); s2.position.z = -W / 2 - t2; grp.add(s2);
+      // sarım sacı: profil yayı boyunca kalınlıklı bant
+      const cx = P.reduce((a, p) => a + p[0], 0) / P.length, cy = P.reduce((a, p) => a + p[1], 0) / P.length;
+      const outer = P.map(([x, y]) => { const dx = x - cx, dy = y - cy, l = Math.hypot(dx, dy) || 1; return [x + dx / l * t1, y + dy / l * t1]; });
+      const band = new THREE.Shape(P.map(([x, y]) => new THREE.Vector2(x, y)).concat(outer.slice().reverse().map(([x, y]) => new THREE.Vector2(x, y))));
+      const wrapM = new THREE.Mesh(new THREE.ExtrudeGeometry(band, { depth: W, bevelEnabled: false }), M.paint); wrapM.position.z = -W / 2; grp.add(wrapM);
+      // bıçak ve dişler (ağız kenarında, ağız yönünde)
+      const dir = new THREE.Vector2(lip[0] - P[3][0], lip[1] - P[3][1]).normalize(), ang = Math.atan2(dir.y, dir.x);
+      const blade = new THREE.Mesh(new THREE.BoxGeometry(bh * 0.6, t3, W + 2 * t2), M.dark); blade.position.set(lip[0] + dir.x * bh * 0.3, lip[1] + dir.y * bh * 0.3, 0); blade.rotation.z = ang; grp.add(blade);
+      const tl_ = Math.max(60, Math.sqrt(Ap) * 0.22), tw = Math.min(W / Math.max(nd, 1) * 0.55, 90);
+      for (let i = 0; i < (nd || 0); i++) {
+        const z = -W / 2 + (i + 0.5) * W / nd, tooth = new THREE.Mesh(new THREE.ConeGeometry(tw / 2, tl_, 4), M.dark);
+        tooth.position.set(lip[0] + dir.x * (bh * 0.6 + tl_ / 2), lip[1] + dir.y * (bh * 0.6 + tl_ / 2), z); tooth.rotation.z = ang - PI / 2; tooth.rotation.y = PI / 4; grp.add(tooth);
+      }
+      // kulaklar (sırtın üstünde, makineye bağlanan gözler)
+      const ear = new THREE.Shape(); const eL = Math.sqrt(Ap) * 0.55, eH = Math.sqrt(Ap) * 0.35;
+      ear.moveTo(0, 0); ear.lineTo(eL, 0); ear.lineTo(eL * 0.75, eH); ear.lineTo(eL * 0.2, eH); ear.lineTo(0, 0);
+      [-1, 1].forEach(sg => { const e = new THREE.Mesh(new THREE.ExtrudeGeometry(ear, { depth: t2 * 1.5, bevelEnabled: false }), M.steel); e.position.set(back[0] - eL * 0.1, back[1], sg * W * 0.22 - t2 * 0.75); grp.add(e); });
+      return { view: 'kova', th: 1.1, ph: 0.95 };
+    });
+  }
+  // Hortum takımı: hortum + iki uçta pres rakor; dirsek, en dar bükülme yarıçapıyla
+  function hose3D(host, g) {
+    view3D(host, (grp, M) => {
+      const di = g.d, ro = Math.max(di * 0.95 + 4, di / 2 + 5), R = Math.max(g.R, ro * 3), L = Math.max(g.L, R * 2);
+      const arcA = Math.min(PI / 2, (L * 0.6) / R), arcL = arcA * R, s1 = Math.max(ro * 4, (L - arcL) / 2), pts = [];
+      for (let i = 0; i <= 10; i++) pts.push(new THREE.Vector3(0, i / 10 * s1, 0));
+      for (let i = 1; i <= 24; i++) { const t = i / 24 * arcA; pts.push(new THREE.Vector3(R - R * Math.cos(t), s1 + R * Math.sin(t), 0)); }
+      const end = pts[pts.length - 1], tdir = new THREE.Vector3(Math.sin(arcA), Math.cos(arcA), 0);
+      for (let i = 1; i <= 10; i++) pts.push(end.clone().add(tdir.clone().multiplyScalar(i / 10 * s1)));
+      const curve = new THREE.CatmullRomCurve3(pts);
+      grp.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 160, ro, 24, false), M.rubber));
+      const fit = (pos, dir) => {
+        const f_ = new THREE.Group(), fl = di * 2.2 + 25;
+        f_.add(lathe([[ro * 1.22, -fl], [ro * 1.22, 0], [ro * 1.05, 0], [ro * 1.05, -fl]], M.chrome));
+        const nut = new THREE.Mesh(new THREE.CylinderGeometry(ro * 1.55, ro * 1.55, di + 14, 6), M.brass); nut.position.y = -fl - (di + 14) / 2; f_.add(nut);
+        f_.add(lathe([[di * 0.35, -fl - di - 14], [ro * 0.95, -fl - di - 14], [ro * 0.7, -fl - di - 30], [di * 0.35, -fl - di - 30]], M.brass));
+        along(f_, pos, dir); grp.add(f_);
+      };
+      fit(pts[0], new THREE.Vector3(0, 1, 0)); fit(pts[pts.length - 1], tdir.clone().negate());
+      return { view: 'hose', th: 0, ph: 1.5 };
+    });
+  }
+  // Tank (yağ seviyesiyle) ve akümülatör
+  function tank3D(host, g) {
+    view3D(host, (grp, M) => {
+      const V = Math.max(10, g.V) / 1000, s_ = Math.cbrt(V / (1.6 * 1 * 0.9)) * 1000, Lx = 1.6 * s_, Wz = s_, Hy = 0.9 * s_;
+      const shell = new THREE.Mesh(new THREE.BoxGeometry(Lx, Hy, Wz), M.shell); shell.position.y = Hy / 2; grp.add(shell);
+      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(Lx, Hy, Wz)), new THREE.LineBasicMaterial({ color: 0x2b3238 })); edges.position.y = Hy / 2; grp.add(edges);
+      const oil = new THREE.Mesh(new THREE.BoxGeometry(Lx * 0.98, Hy * 0.75, Wz * 0.98), M.oil); oil.position.y = Hy * 0.375; grp.add(oil);
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(s_ * 0.07, s_ * 0.07, s_ * 0.08, 24), M.dark); cap.position.set(-Lx * 0.3, Hy + s_ * 0.04, 0); grp.add(cap);
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(s_ * 0.06, Hy * 0.35, 6), M.chrome); glass.position.set(Lx * 0.3, Hy * 0.55, Wz / 2 + 3); grp.add(glass);
+      [-1, 1].forEach(a => [-1, 1].forEach(b => { const leg = new THREE.Mesh(new THREE.BoxGeometry(s_ * 0.06, s_ * 0.12, s_ * 0.06), M.dark); leg.position.set(a * Lx * 0.45, -s_ * 0.06, b * Wz * 0.4); grp.add(leg); }));
+      let accD = 0, accL = 0;
+      if (g.acc > 0) {
+        const v = g.acc / 1000; accD = Math.cbrt(4 * v / (3 * PI)) * 1000; accL = accD * 3;
+        const acc = new THREE.Group(), r = accD / 2;
+        acc.add(new THREE.Mesh(new THREE.CylinderGeometry(r, r, accL - accD, 32), M.red));
+        [1, -1].forEach(sg => { const hs = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 16, 0, PI * 2, 0, PI / 2), M.red); hs.position.y = sg * (accL - accD) / 2; if (sg < 0) hs.rotation.x = PI; acc.add(hs); });
+        const valve = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.18, r * 0.18, r * 0.5, 16), M.brass); valve.position.y = accL / 2 + r * 0.2; acc.add(valve);
+        acc.position.set(Lx / 2 + accD * 1.2, accL / 2, 0); grp.add(acc);
+      }
+      g.out = { Lx, Wz, Hy, accD, accL };
+      return { view: 'tank', th: 0.7, ph: 1.15 };
+    });
+    return g.out;
+  }
+
+  /* ================= 2B çizimler (SVG) ================= */
+  function pimSVG(o) {
+    const { d, b, a, n, okP, okT, okB } = o, gap = 4, tot = n === 2 ? b + 2 * a + 2 * gap : b + a + gap, W = 340, k = Math.min(250 / tot, 120 / (d * 2.4)), cx = W / 2, cy = 75;
+    const X = mm => cx + (mm - tot / 2) * k, col = g => g ? '#2B6683' : '#A3262A';
+    const eyeH = d * 2.2 * k, earH = d * 2.0 * k, pinY = cy - d * k / 2;
+    let s = `<svg viewBox="0 0 ${W} 170" style="width:100%;max-width:420px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-s)">`;
+    let x0 = 0;
+    const ear = x => { s += `<rect x="${X(x)}" y="${cy - earH / 2}" width="${a * k}" height="${earH}" fill="#8a99a3" stroke="#1c2830"/>`; };
+    if (n === 2) { ear(0); x0 = a + gap; } else x0 = 0;
+    s += `<rect x="${X(x0)}" y="${cy - eyeH / 2}" width="${b * k}" height="${eyeH}" fill="#f2b705" stroke="#1c2830"/>`;
+    s += `<rect x="${X(x0)}" y="${cy - d * k * 0.72}" width="${b * k}" height="${d * k * 1.44}" fill="${col(okP)}" opacity=".9" stroke="#1c2830"/><text x="${X(x0) + 4}" y="${cy - d * k * 0.72 + 10}" font-size="9" fill="#fff">burç</text>`;
+    ear(x0 + b + gap);
+    s += `<rect x="${X(0) - 8}" y="${pinY}" width="${tot * k + 16}" height="${d * k}" rx="4" fill="${col(okT && okB)}" stroke="#1c2830"/>`;
+    s += `<path d="M${X(x0 + b / 2)} ${cy - eyeH / 2 - 26} v18 m-6 -7 l6 7 l6 -7" stroke="#1c2830" stroke-width="2.2" fill="none"/><text x="${X(x0 + b / 2)}" y="${cy - eyeH / 2 - 30}" font-size="11" text-anchor="middle" fill="var(--ink)">yük</text>`;
+    s += `<text x="${X(x0 + b / 2)}" y="${cy + eyeH / 2 + 16}" font-size="11" text-anchor="middle" fill="var(--ink)">burç ${f(b, 0)} mm</text>`;
+    s += `<text x="${X(tot) + 12}" y="${cy + 4}" font-size="11" fill="var(--ink)">Ø${f(d, 0)} pim</text>`;
+    s += `<text x="8" y="160" font-size="10" fill="var(--muted)"><tspan fill="${col(okP)}">■</tspan> burç basıncı  <tspan fill="${col(okT && okB)}">■</tspan> pim (kesme, eğilme)  ■ mavi: uygun, kırmızı: yetersiz</text>`;
+    return s + '</svg>';
+  }
+  const RAKOR_P = [
+    ['BSP 60° koni', 'BSP', 'M10 40 l20 0 l12 -12 l18 0'],
+    ['BSP düz yüz (conta ile)', 'BSP', 'M10 40 l50 0 M60 28 l0 24'],
+    ['JIC 37° havşa', 'JIC', 'M10 40 l22 0 l14 -11 l14 0'],
+    ['ORFS (O-ringli düz yüz)', 'ORFS', 'M10 40 l50 0 M60 28 l0 24'],
+    ['Metrik 24° koni (DIN 2353)', 'Metrik', 'M10 40 l24 0 l10 -5 l16 0'],
+  ];
+  function rakorSVG(match) {
+    return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">` + RAKOR_P.map(([ad, fam, nose]) => {
+      const hit = match && match.some(m => m.startsWith(fam));
+      let s = `<svg viewBox="0 0 150 92" style="width:100%;background:var(--surface);border:${hit ? '2px solid var(--tape)' : '1px solid var(--line)'};border-radius:var(--r-s)">`;
+      s += `<rect x="70" y="18" width="34" height="44" fill="#c9a74a" stroke="#1c2830"/><rect x="104" y="28" width="36" height="24" fill="#d9e1e6" stroke="#1c2830"/>`;
+      for (let x = 72; x < 104; x += 5) s += `<line x1="${x}" y1="18" x2="${x + 3}" y2="62" stroke="#8a6d1f" stroke-width=".8"/>`;
+      s += `<path d="M70 28 L10 28 L10 52 L70 52" fill="#c9a74a" stroke="#1c2830"/>`;
+      if (ad.startsWith('BSP 60')) s += `<path d="M10 28 L2 40 L10 52" fill="#c9a74a" stroke="#1c2830"/>`;
+      if (ad.startsWith('JIC')) s += `<path d="M10 28 L1 40 L10 52" fill="#c9a74a" stroke="#1c2830"/><text x="14" y="25" font-size="9" fill="var(--ink)">37°</text>`;
+      if (ad.startsWith('Metrik')) s += `<path d="M10 30 L4 40 L10 50" fill="#c9a74a" stroke="#1c2830"/><rect x="14" y="26" width="10" height="28" fill="#8a99a3" stroke="#1c2830"/><text x="14" y="22" font-size="9" fill="var(--ink)">24°</text>`;
+      if (ad.startsWith('BSP düz')) s += `<rect x="6" y="26" width="4" height="28" fill="#1b1f22"/>`;
+      if (ad.startsWith('ORFS')) s += `<circle cx="10" cy="40" r="4" fill="#1b1f22"/>`;
+      s += `<text x="75" y="84" font-size="10" text-anchor="middle" fill="var(--ink)" font-weight="${hit ? 700 : 400}">${ad}</text></svg>`;
+      return s;
+    }).join('') + `</div>`;
+  }
 
   /* ================= Hesaplar ================= */
   const nextIn = (arr, v) => arr.find(x => x >= v - 1e-9) || null;
@@ -169,18 +316,22 @@
       { k: 'yuk', l: 'Kaldırılacak / itilecek yük', u: 'ton', d: 10, hint: 'Silindirin kaldıracağı ya da iteceği en büyük yük' }, { k: 'strok', l: 'Strok', u: 'mm', d: 500, hint: 'Milin dışarı çıkacağı mesafe (kurs boyu)' },
       { k: 'yer', l: 'Kullanım yeri (basınç önerisi)', opts: [['250', 'İş makinesi, kepçe, vinç → 250 bar'], ['210', 'Kaldırma platformu, forklift → 210 bar'], ['200', 'Tarım makinesi, römork → 200 bar'], ['180', 'Damper → 180 bar'], ['160', 'Sanayi makinesi → 160 bar'], ['250p', 'Hidrolik pres → 250 bar']], d: '250', wide: true },
       { k: 'p', l: 'Çalışma basıncı (0 = öneri)', u: 'bar', d: 0, hint: 'Bilmiyorsanız 0 bırakın' }, { k: 'tSure', l: 'İstenen çıkış süresi (0 = debiden)', u: 's', d: 0, hint: 'Mil kaç saniyede tam açılsın' },
-      { k: 'D0', l: 'Piston çapı (çap verildiyse)', u: 'mm', d: 100 }, { k: 'phi', l: 'Alan oranı (piston/halka)', opts: [['1.25', '1,25'], ['1.4', '1,4'], ['1.6', '1,6'], ['2', '2,0']], d: '1.6' },
+      { k: 'D0', l: 'Piston çapı', u: 'mm', d: 100 }, { k: 'adet', l: 'Adet (teklif için)', u: '', d: 1 },
+    ].concat(A_([
+      { k: 'phi', l: 'Alan oranı (piston/halka)', opts: [['1.25', '1,25'], ['1.4', '1,4'], ['1.6', '1,6'], ['2', '2,0']], d: '1.6' },
       { k: 'd0', l: 'Mil çapı (0 = otomatik)', u: 'mm', d: 0 },
       { k: 'kapali', l: 'Kapalı boy, göz-göz (0 = tahmini)', u: 'mm', d: 0 }, { k: 'eta', l: 'Mekanik verim', u: '%', d: 90 },
       { k: 'euler', l: 'Bağlantı (burkulma durumu)', opts: [['1', 'Göz – göz (iki uç mafsallı)'], ['0.7', 'Flanş – göz (bir uç ankastre)'], ['2', 'Bir uç ankastre, diğeri serbest'], ['0.5', 'İki uç ankastre']], d: '1', wide: true },
       { k: 'Sk', l: 'Burkulma emniyet katsayısı', u: '', d: 3.5 }, { k: 'Re', l: 'Boru akma dayanımı', u: 'MPa', d: 355 },
       { k: 'St', l: 'Boru emniyet katsayısı', u: '', d: 2 }, { k: 'Q', l: 'Pompa debisi (süre 0 ise)', u: 'l/dk', d: 60 },
-      { h: 'Maliyet' }, { k: 'adet', l: 'Adet', u: '', d: 1 }, { k: 'hIs', l: 'Talaşlı işleme (0 = tahmini)', u: 'saat', d: 0 },
+      { k: 'hIs', l: 'Talaşlı işleme (0 = tahmini)', u: 'saat', d: 0 },
       { k: 'hKa', l: 'Kaynak (0 = tahmini)', u: 'saat', d: 0 }, { k: 'hMo', l: 'Montaj + test (0 = tahmini)', u: 'saat', d: 0 },
-    ], v => calc(v));
+    ])), v => calc(v));
     root.innerHTML = '<div id="hy3d" style="margin-bottom:6px"></div><div id="hyHead"></div>' + F.html + '<div id="hyOut"></div><div id="hyNext"></div>';
     let last = null;
     function calc(v) {
+      const showF = (k, on) => { const e = root.querySelector(`[data-hk="${k}"]`); if (e) e.closest('label').hidden = !on; };
+      showF('yuk', v.mode === 'yuk'); showF('D0', v.mode === 'cap');
       const p = ok(v.p) ? v.p : parseFloat(v.yer) || 250, pM = p / 10, eta = (ok(v.eta) ? v.eta : 90) / 100, phi = num(v.phi) || 1.6, out = $('#hyOut');
       if (!ok(p)) { out.innerHTML = warnP('Basıncı girin.'); return; }
       let D, Freq = ok(v.yuk) ? v.yuk * 9806.65 : 0, Dreq = 0;
@@ -216,9 +367,15 @@
       ];
       const cost = lines.reduce((a, l) => a + l[1], 0), qty = ok(v.adet) ? Math.round(v.adet) : 1;
       last = { D, d, OD, stroke, closed, p, Fp, Fc, lines, qty, mass: mT + mR + mP };
-      out.innerHTML = `<div class="plate" style="margin-top:12px"><div class="lbl">Seçilen silindir</div><div class="big">Ø${D} / Ø${d} × ${f(stroke, 0)}</div>
-        <div class="sub"><span>İtme <b>${f(Fp / 9806.65, 2)} ton</b></span><span>Çekme <b>${f(Fc / 9806.65, 2)} ton</b></span><span>Ağırlık <b>~${f(mT + mR + mP, 0)} kg</b></span></div></div>` +
-        kv([
+      const tOut = ok(Q) && stroke ? stroke / 1000 / vo : 0;
+      const checks = [];
+      if (v.mode === 'yuk') checks.push([Fp >= Freq, Fp >= Freq ? `${f(v.yuk, 1)} ton yükü kaldırır (en fazla ${f(Fp / 9806.65, 1)} ton)` : `${f(v.yuk, 1)} ton yükü kaldıramaz`]);
+      checks.push([bk.ok, bk.ok ? `Mil yeterince kalın: ${f(stroke, 0)} mm açıkken yük altında bükülmez` : `Mil ince: bu strokta bükülebilir, ${dMinB ? 'en az Ø' + dMinB + ' mil gerekir' : 'stroku kısaltın ya da bağlantıyı değiştirin'}`]);
+      checks.push([sOk, sOk ? `Boru basınca dayanır (Ø${D} iç / Ø${OD} dış)` : 'Bu basınç bu boru malzemesi için çok yüksek']);
+      checks.push([null, ok(Q) ? `Mil ${f(tOut, 1)} saniyede açılır · pompa ${f(Q, 0)} l/dk · elektrik motoru ${mot ? mot + ' kW' : 'çok büyük'}` : 'Hız için "İstenen çıkış süresi"ni girin']);
+      out.innerHTML = card('Önerilen silindir', `Ø${D} / Ø${d} × ${f(stroke, 0)}`, [`Basınç <b>${f(p, 0)} bar</b>`, `Ağırlık <b>~${f(mT + mR + mP, 0)} kg</b>`, `Fiyat <b>${tl(cost * kFactor())}</b>`]) + chk(checks) +
+        (opts.length ? `<p class="note" style="margin:6px 0 4px">Başka basınçla aynı yük için:</p><div class="row" style="gap:6px">${opts.filter(o => o[0] !== p).map(([pp, Dx, dx]) => `<button class="btn" data-pp="${pp}" style="padding:4px 10px">${pp} bar → Ø${Dx}/Ø${dx}</button>`).join('')}</div>` : '') +
+        det(kv([
           v.mode === 'yuk' ? ['Gereken piston çapı (hesap)', `Ø${f(Dreq, 1)} mm → standart Ø${D} mm (ISO 3320)`] : ['Piston çapı', `Ø${D} mm`],
           ['Mil çapı', `Ø${d} mm (alan oranı ${f(A / Aa, 2)})`],
           ['İtme / çekme kuvveti', `${f(Fp / 1000, 1)} kN / ${f(Fc / 1000, 1)} kN (verim %${f(eta * 100, 0)})`],
@@ -227,15 +384,13 @@
           ['Açık boy (göz-göz)', `${f(Lext, 0)} mm (kapalı ${f(closed, 0)}${ok(v.kapali) ? '' : ', tahmini'})`],
           ['Burkulma boyu Lk', `${f(Lk, 0)} mm, narinlik λ = ${f(bk.lam, 0)} (${bk.how})`],
           ['Burkulma yükü / izin verilen', `${f(bk.Fk / 1000, 1)} kN / ${f(bk.Fallow / 1000, 1)} kN`],
-          ['Burkulma kontrolü', bk.ok ? badge(true, 'Uygun') : badge(false, `Yetersiz — ${dMinB ? 'en az Ø' + dMinB + ' mil gerekli' : 'mil yetmez, strok/bağlantıyı değiştirin'}`)],
           ['Hız (çıkış / dönüş)', ok(Q) ? `${f(vo, 3)} / ${f(vi, 3)} m/s` : '-'],
           ['Süre (çıkış / dönüş)', ok(Q) && stroke ? `${f(stroke / 1000 / vo, 1)} / ${f(stroke / 1000 / vi, 1)} s` : '-'],
           ['Yağ hacmi (çıkış)', `${f(A * stroke / 1e6, 2)} litre`],
           ['Gereken pompa debisi', ok(Q) ? `${f(Q, 1)} l/dk${Qt ? ` (${f(v.tSure, 1)} s çıkış için)` : ''}` : '-'],
           ['Pompa gücü / elektrik motoru', ok(Q) ? `${f(Pkw, 2)} kW → ${mot ? mot + ' kW motor' : 'çok büyük'}` : '-'],
-        ]) + (opts.length ? `<h3>Basınca göre seçenekler (${f(v.yuk, 1)} ton)</h3>` + table(['Basınç', 'Piston / mil', ''], opts.map(([pp, Dx, dx]) => [`${pp} bar`, `Ø${Dx} / Ø${dx}`, pp === p ? '<b>seçili</b>' : `<button class="btn" data-pp="${pp}" style="padding:4px 10px">Seç</button>`])) : '') +
-        `<h3>Kaba maliyet (1 adet, gider ve kâr hariç)</h3>` + table(null, lines.map(([n, x]) => [esc(n), tl(x)]).concat([['<b>Toplam maliyet</b>', `<b>${tl(cost)}</b>`], [`Genel gider + kâr ile birim fiyat`, `<b>${tl(cost * kFactor())}</b>`]])) +
-        `<p class="note">Ön hesaptır. Kafa/piston ölçüleri, kaynak ve keçe tipi tasarıma göre değişir; nihai tasarım ve basınç testi zorunludur. Fiyatlar Hidrolik → Fiyatlar'dan değiştirilir.</p>`;
+        ]) + `<h3>Kaba maliyet (1 adet, gider ve kâr hariç)</h3>` + table(null, lines.map(([n, x]) => [esc(n), tl(x)]).concat([['<b>Toplam maliyet</b>', `<b>${tl(cost)}</b>`], [`Genel gider + kâr ile birim fiyat`, `<b>${tl(cost * kFactor())}</b>`]])) +
+        `<p class="note">Ön hesaptır. Kafa/piston ölçüleri, kaynak ve keçe tipi tasarıma göre değişir; nihai tasarım ve basınç testi zorunludur. Fiyatlar Hidrolik → Fiyatlar'dan değiştirilir.</p>`);
       cyl3D($('#hy3d'), { D, OD, d, Lt, ext: stroke * 0.6, eye: Math.max(12, d * 0.45) });
       $('#hyHead').innerHTML = '';
       out.querySelectorAll('[data-pp]').forEach(b => b.onclick = () => { const i = root.querySelector('[data-hk="p"]'); i.value = b.dataset.pp; i.dispatchEvent(new Event('input')); });
@@ -273,23 +428,26 @@
     const F = form('hortum', [
       { k: 'Q', l: 'Debi', u: 'l/dk', d: 60 }, { k: 'p', l: 'Çalışma basıncı (tepe dahil)', u: 'bar', d: 250 },
       { k: 'hat', l: 'Hat tipi', opts: [['basinc', 'Basınç hattı'], ['donus', 'Dönüş hattı'], ['emis', 'Emiş hattı']], d: 'basinc' },
-      { k: 'L', l: 'Hortum boyu', u: 'm', d: 2 }, { k: 'nu', l: 'Yağ viskozitesi (çalışma sıcaklığında)', u: 'cSt', d: 32 }, { k: 'rho', l: 'Yağ yoğunluğu', u: 'kg/m³', d: 870 },
-    ], v => {
+      { k: 'L', l: 'Hortum boyu', u: 'm', d: 2 },
+    ].concat(A_([{ k: 'nu', l: 'Yağ viskozitesi (çalışma sıcaklığında)', u: 'cSt', d: 32 }, { k: 'rho', l: 'Yağ yoğunluğu', u: 'kg/m³', d: 870 }])), v => {
       const out = $('#hyOut'); if (!ok(v.Q) || !ok(v.p)) { out.innerHTML = warnP('Debi ve basıncı girin.'); return; }
       const vt = vTarget(v.hat, v.p), dmin = Math.sqrt(4 * v.Q / 60000 / vt / PI) * 1000;
-      const rows = [];
+      const rows = []; let first = null;
       for (const t of HOSE_ORDER) {
         const r = HOSES[t].rows.find(x => x[1] >= dmin * 0.97 && x[2] >= v.p);
         if (!r) continue;
         const L = dpLoss(v.Q, r[1], ok(v.L) ? v.L : 1, ok(v.nu) ? v.nu : 32, ok(v.rho) ? v.rho : 870);
+        if (!first) first = { t, r, L };
         rows.push([`<b>${t}</b><br><small>${HOSES[t].std}</small>`, `DN${r[0]} (Ø${f(r[1], 1)})`, `${r[2]} bar`, `${r[3]} mm`, `${f(L.v, 2)} m/s`, `${f(L.dp, 2)} bar`]);
       }
-      out.innerHTML = kv([['Önerilen akış hızı', `${f(vt, 1)} m/s (${{ basinc: 'basınç', donus: 'dönüş', emis: 'emiş' }[v.hat]} hattı)`], ['Gereken en küçük iç çap', `Ø${f(dmin, 1)} mm`]]) +
+      if (first) hose3D($('#hy3d'), { d: first.r[1], R: first.r[3], L: Math.min((ok(v.L) ? v.L : 1) * 1000, first.r[3] * 6) });
+      out.innerHTML = (first ? card('Önerilen hortum', `${first.t} DN${first.r[0]}`, [`İç çap <b>Ø${f(first.r[1], 1)} mm</b>`, `Dayanır <b>${first.r[2]} bar</b>`, `En dar kıvrım <b>R${first.r[3]} mm</b>`]) +
+        chk([[first.L.dp < 2, first.L.dp < 2 ? `Basınç kaybı düşük (${f(first.L.dp, 2)} bar)` : `Basınç kaybı yüksek (${f(first.L.dp, 2)} bar): bir üst çapı seçin`], [null, `Resimdeki dirsek, hortumun kırılmadan kıvrılabileceği en dar yaydır (R${first.r[3]} mm)`]]) : '') + det(kv([['Önerilen akış hızı', `${f(vt, 1)} m/s (${{ basinc: 'basınç', donus: 'dönüş', emis: 'emiş' }[v.hat]} hattı)`], ['Gereken en küçük iç çap', `Ø${f(dmin, 1)} mm`]]) +
         (rows.length ? `<h3>Uygun hortumlar (ucuzdan pahalıya)</h3>` + table(['Tip', 'Ölçü', 'Çalışma bas.', 'Min. bükülme R', 'Hız', 'Basınç kaybı'], rows) + `<p class="note">İlk satır genelde en ekonomik seçimdir. Patlama basıncı çalışma basıncının 4 katıdır (EN 853/856). Basınç darbeleri olan hatlarda bir üst sınıf seçin. Değerler tipik katalog değerleridir; kullandığınız markanın kataloğuyla doğrulayın. Rakor ve dirsek kayıpları dahil değildir.</p>`
-          : warnP('Bu basınç ve debi için tablodaki hortumlardan uygun olan yok; iki paralel hat ya da boru düşünün.'));
+          : warnP('Bu basınç ve debi için tablodaki hortumlardan uygun olan yok; iki paralel hat ya da boru düşünün.')), 'Ayrıntılar: tüm uygun hortumlar');
     });
     let best = null;
-    root.innerHTML = F.html + '<div id="hyOut"></div>';
+    root.innerHTML = '<div id="hy3d" style="margin-bottom:6px"></div>' + F.html + '<div id="hyOut"></div>';
     F.bind(root);
     const items = [['Hortum imalat teklifi', () => { const v = saved('hortum'); if (best) H().store.set('hyd.in.hortumImalat.rows', [{ t: best.t, dn: best.dn, L: num(v.L) || 1, n: 2, sp: 0 }]); openTool('hortumImalat'); }],
       ['Test raporu (2× test)', () => { const v = saved('hortum'); openTool('test', { vals: S_({ tanim: best ? `Hortum ${best.t} DN${best.dn} × ${v.L} m` : 'Hortum takımı', pw: best ? best.pw : num(v.p), tip: '2' }) }); }],
@@ -305,8 +463,8 @@
       const out = $('#hyOut'); if (![v.D, v.d, v.s, v.Q].every(ok) || v.d >= v.D) { out.innerHTML = warnP('Değerleri kontrol edin (mil, pistondan küçük olmalı).'); return; }
       const A = PI * v.D ** 2 / 4, Aa = PI * (v.D ** 2 - v.d ** 2) / 4, Ar = PI * v.d ** 2 / 4, q = v.Q * 1e6 / 60;
       const vo = q / A / 1000, vi = q / Aa / 1000, vr = q / Ar / 1000;
-      out.innerHTML = kv([['Çıkış hızı / süresi', `${f(vo, 3)} m/s · ${f(v.s / 1000 / vo, 1)} s`], ['Dönüş hızı / süresi', `${f(vi, 3)} m/s · ${f(v.s / 1000 / vi, 1)} s`],
-        ['Diferansiyel (rejeneratif) çıkış', `${f(vr, 3)} m/s · ${f(v.s / 1000 / vr, 1)} s (kuvvet mil alanına düşer)`], ['Dönüşte tanka giden debi', `${f(v.Q * A / Aa, 1)} l/dk (dönüş filtresi buna göre seçilir)`], ['Alan oranı', f(A / Aa, 2)]]);
+      out.innerHTML = card('Süreler', `Açılma ${f(v.s / 1000 / vo, 1)} s · Kapanma ${f(v.s / 1000 / vi, 1)} s`, [`Debi <b>${f(v.Q, 0)} l/dk</b>`]) + det(kv([['Çıkış hızı / süresi', `${f(vo, 3)} m/s · ${f(v.s / 1000 / vo, 1)} s`], ['Dönüş hızı / süresi', `${f(vi, 3)} m/s · ${f(v.s / 1000 / vi, 1)} s`],
+        ['Diferansiyel (rejeneratif) çıkış', `${f(vr, 3)} m/s · ${f(v.s / 1000 / vr, 1)} s (kuvvet mil alanına düşer)`], ['Dönüşte tanka giden debi', `${f(v.Q * A / Aa, 1)} l/dk (dönüş filtresi buna göre seçilir)`], ['Alan oranı', f(A / Aa, 2)]]));
     });
     root.innerHTML = F.html + '<div id="hyOut"></div>'; F.bind(root);
     const items = [['Pompa ve motor', () => { const v = saved('hiz'); openTool('pompa', { vals: S_({ V: Math.ceil(num(v.Q) * 1000 / (1450 * 0.92)), n: 1450 }) }); }], ['Hortum seç', () => { const v = saved('hiz'); openTool('hortum', { vals: S_({ Q: num(v.Q) }) }); }], ['Valf seç (dönüş debisi)', () => { const v = saved('hiz'); const D = num(v.D), d = num(v.d); openTool('valf', { vals: S_({ Q: Math.ceil(num(v.Q) * D * D / (D * D - d * d)) }) }); }]];
@@ -316,21 +474,21 @@
   /* ---------- 4. Pompa ve motor ---------- */
   tool('pompa', 'Hesap', 'Pompa ve hidrolik motor', 'Debi, güç, elektrik motoru; hidrolik motor tork ve devri', root => {
     const F = form('pompa', [
-      { h: 'Pompa' }, { k: 'V', l: 'Pompa hacmi', u: 'cc/dev', d: 25 }, { k: 'n', l: 'Devir', u: 'd/dk', d: 1450 }, { k: 'p', l: 'Basınç', u: 'bar', d: 200 },
-      { k: 'ev', l: 'Hacimsel verim', u: '%', d: 92 }, { k: 'et', l: 'Toplam verim', u: '%', d: 85 },
-      { h: 'Hidrolik motor' }, { k: 'Vm', l: 'Motor hacmi', u: 'cc/dev', d: 100 }, { k: 'Qm', l: 'Gelen debi', u: 'l/dk', d: 60 }, { k: 'dpm', l: 'Basınç farkı', u: 'bar', d: 180 },
-      { k: 'evm', l: 'Hacimsel verim', u: '%', d: 92 }, { k: 'ehm', l: 'Mekanik verim', u: '%', d: 90 },
-    ], v => {
-      const out = $('#hyOut'), r = [];
+      { h: 'Pompa' }, { k: 'V', l: 'Pompa hacmi', u: 'cc/dev', d: 25, hint: 'Pompanın bir turda bastığı yağ' }, { k: 'n', l: 'Devir', u: 'd/dk', d: 1450 }, { k: 'p', l: 'Basınç', u: 'bar', d: 200 },
+      { h: 'Hidrolik motor (varsa)' }, { k: 'Vm', l: 'Motor hacmi', u: 'cc/dev', d: 100 }, { k: 'Qm', l: 'Gelen debi', u: 'l/dk', d: 60 }, { k: 'dpm', l: 'Basınç farkı', u: 'bar', d: 180 },
+    ].concat(A_([{ k: 'ev', l: 'Pompa hacimsel verim', u: '%', d: 92 }, { k: 'et', l: 'Pompa toplam verim', u: '%', d: 85 }, { k: 'evm', l: 'Motor hacimsel verim', u: '%', d: 92 }, { k: 'ehm', l: 'Motor mekanik verim', u: '%', d: 90 }])), v => {
+      const out = $('#hyOut'), r = []; let top = '';
       if ([v.V, v.n, v.p].every(ok)) {
         const Q = v.V * v.n * (v.ev || 92) / 100 / 1000, Pk = v.p * Q / 600 / ((v.et || 85) / 100), m = nextIn(MOTORS, Pk);
+        top += card('Pompa', `${f(Q, 0)} l/dk · ${m ? m + ' kW motor' : 'çok büyük'}`, [`Gereken güç <b>${f(Pk, 1)} kW</b>`]);
         r.push(['Pompa debisi', `${f(Q, 1)} l/dk`], ['Gereken güç', `${f(Pk, 2)} kW`], ['Elektrik motoru', m ? `${m} kW (standart)` : 'çok büyük'], ['Pompa mili torku', `${f(v.V * v.p / (20 * PI) / ((v.et || 85) / (v.ev || 92)), 0)} Nm`]);
       }
       if ([v.Vm, v.Qm, v.dpm].every(ok)) {
         const n = v.Qm * 1000 * (v.evm || 92) / 100 / v.Vm, T = v.Vm * v.dpm / (20 * PI) * (v.ehm || 90) / 100;
+        top += card('Hidrolik motor', `${f(n, 0)} d/dk · ${f(T, 0)} Nm`);
         r.push(['Motor devri', `${f(n, 0)} d/dk`], ['Motor torku', `${f(T, 0)} Nm`], ['Çıkış gücü', `${f(T * n * 2 * PI / 60 / 1000, 2)} kW`]);
       }
-      out.innerHTML = r.length ? kv(r) : warnP('Değerleri girin.');
+      out.innerHTML = r.length ? top + det(kv(r)) : warnP('Değerleri girin.');
     });
     root.innerHTML = F.html + '<div id="hyOut"></div>'; F.bind(root);
     const pq = () => { const v = saved('pompa'); return { Q: +(num(v.V) * num(v.n) * (num(v.ev) || 92) / 100 / 1000).toFixed(1), p: num(v.p) }; };
@@ -341,47 +499,59 @@
   /* ---------- 5. Pim ve burç ---------- */
   tool('pim', 'Hesap', 'Pim ve burç kontrolü', 'Kova/bom pimlerinde yüzey basıncı, kesme ve eğilme', root => {
     const F = form('pim', [
-      { k: 'F', l: 'Pime gelen kuvvet', u: 'kN', d: 150 }, { k: 'd', l: 'Pim çapı', u: 'mm', d: 60 }, { k: 'b', l: 'Burç boyu (orta göz)', u: 'mm', d: 80 },
-      { k: 'a', l: 'Yan kulak kalınlığı', u: 'mm', d: 25 }, { k: 'kes', l: 'Kesme', opts: [['2', 'Çift kesme (çatal)'], ['1', 'Tek kesme']], d: '2' },
+      { k: 'F', l: 'Pime gelen kuvvet', u: 'kN', d: 150, hint: 'Silindir ekranından gelince kendiliğinden dolar' }, { k: 'd', l: 'Pim çapı', u: 'mm', d: 60 }, { k: 'b', l: 'Burç boyu (orta göz)', u: 'mm', d: 80 },
+      { k: 'kes', l: 'Bağlantı', opts: [['2', 'Çatal (iki yan kulak)'], ['1', 'Tek kulak']], d: '2' },
+    ].concat(A_([{ k: 'a', l: 'Yan kulak kalınlığı', u: 'mm', d: 25 },
       { k: 'Re', l: 'Pim akma dayanımı (42CrMo4 ıslah ~650)', u: 'MPa', d: 650 }, { k: 'pz', l: 'Burç izin verilen yüzey basıncı', u: 'MPa', d: 40, hint: 'Gresli çelik burç tipik 30–60; bronz 15–30' },
-      { k: 'S', l: 'Emniyet katsayısı', u: '', d: 2 },
-    ], v => {
+      { k: 'S', l: 'Emniyet katsayısı', u: '', d: 2, hint: 'Kırıcı, kazı gibi darbeli işlerde 2,5–3' }])), v => {
       const out = $('#hyOut'); if (![v.F, v.d, v.b].every(ok)) { out.innerHTML = warnP('Değerleri girin.'); return; }
       const Fn = v.F * 1000, n = num(v.kes) || 2, S = v.S || 2, Re = v.Re || 650, a = ok(v.a) ? v.a : v.b * 0.3;
       const p = Fn / (v.d * v.b), tau = Fn / (n * PI * v.d ** 2 / 4), M = n === 2 ? Fn * (v.b + 2 * a) / 8 : Fn * (v.b / 2 + a / 2), sb = M / (PI * v.d ** 3 / 32);
       const tA = 0.577 * Re / S, sA = Re / S;
       const dP = Fn / (v.pz * v.b), dT = Math.sqrt(Fn / (n * PI / 4 * tA)), dB = Math.cbrt(32 * M / (PI * sA));
-      out.innerHTML = kv([
+      const okP = p <= v.pz, okT = tau <= tA, okB = sb <= sA, dmin = Math.max(dP, dT, dB);
+      $('#hySvg').innerHTML = pimSVG({ d: v.d, b: v.b, a, n, okP, okT, okB });
+      const fixes = [];
+      if (!okP) fixes.push([false, `Burç zorlanıyor: burç boyunu en az ${Math.ceil(Fn / (v.pz * v.d))} mm yapın ya da pimi Ø${Math.ceil(dP)} mm'ye çıkarın`]);
+      if (!okT) fixes.push([false, `Pim kesilmeye dayanmaz: en az Ø${Math.ceil(dT)} mm pim gerekir`]);
+      if (!okB) fixes.push([false, `Pim eğilir: en az Ø${Math.ceil(dB)} mm pim gerekir ya da yan kulakları burca yaklaştırın`]);
+      out.innerHTML = (okP && okT && okB ? card('Sonuç', `✓ Ø${f(v.d, 0)} pim yeterli`, [`En az <b>Ø${f(dmin, 0)} mm</b> gerekir`]) + chk([[true, 'Burç, kesme ve eğilme kontrollerinin üçü de geçti']])
+        : card('Sonuç', `✗ Ø${f(v.d, 0)} pim / ${f(v.b, 0)} mm burç yetersiz`, [`En az <b>Ø${f(dmin, 0)} mm</b> pim gerekir`]) + chk(fixes)) + det(kv([
         ['Yüzey basıncı (burç)', `${f(p, 1)} MPa — ${p <= v.pz ? badge(true, 'uygun') : badge(false, 'yüksek')}`],
         ['Kesme gerilmesi', `${f(tau, 1)} MPa (izin ${f(tA, 0)}) — ${tau <= tA ? badge(true, 'uygun') : badge(false, 'yüksek')}`],
         ['Eğilme gerilmesi', `${f(sb, 1)} MPa (izin ${f(sA, 0)}) — ${sb <= sA ? badge(true, 'uygun') : badge(false, 'yüksek')}`],
         ['Gereken en küçük pim çapı', `<b>Ø${f(Math.max(dP, dT, dB), 1)} mm</b> (basınç ${f(dP, 0)} · kesme ${f(dT, 0)} · eğilme ${f(dB, 0)})`],
-      ]) + '<p class="note">Darbe ve titreşimli çalışmada (kırıcı, kazı) emniyet katsayısını 2,5–3 alın. Burç boyu artırmak yüzey basıncını düşürür ve aşınmayı yavaşlatır.</p>';
+      ]) + '<p class="note">Darbe ve titreşimli çalışmada (kırıcı, kazı) emniyet katsayısını 2,5–3 alın. Burç boyu artırmak yüzey basıncını düşürür ve aşınmayı yavaşlatır.</p>');
     });
-    root.innerHTML = F.html + '<div id="hyOut"></div>'; F.bind(root);
+    root.innerHTML = '<div id="hySvg" style="margin-bottom:8px"></div>' + F.html + '<div id="hyOut"></div>'; F.bind(root);
   });
 
   /* ---------- 6. Tank, akümülatör, soğutma ---------- */
   tool('tank', 'Hesap', 'Tank, akümülatör, soğutma', 'Tank hacmi, ısı yükü ve soğutucu ihtiyacı, akümülatör hacmi', root => {
     const F = form('tank', [
-      { h: 'Tank ve ısı' }, { k: 'Q', l: 'Pompa debisi', u: 'l/dk', d: 60 }, { k: 'tip', l: 'Uygulama', opts: [['3', 'Sabit (endüstriyel) ×3'], ['1.5', 'Mobil (iş makinesi) ×1,5']], d: '1.5' },
-      { k: 'Pin', l: 'Pompa giriş gücü', u: 'kW', d: 25 }, { k: 'kay', l: 'Isıya dönen kayıp', u: '%', d: 25, hint: 'Tipik %20–30' }, { k: 'dT', l: 'Yağ – ortam sıcaklık farkı', u: '°C', d: 30 },
-      { h: 'Akümülatör' }, { k: 'p1', l: 'En düşük çalışma basıncı', u: 'bar', d: 120 }, { k: 'p2', l: 'En yüksek basınç', u: 'bar', d: 180 }, { k: 'dV', l: 'Gereken yağ', u: 'litre', d: 2 },
-      { k: 'n', l: 'Süreç', opts: [['1', 'Yavaş (izotermal)'], ['1.4', 'Hızlı (adyabatik)']], d: '1.4' },
-    ], v => {
-      const out = $('#hyOut'), r = [];
+      { h: 'Tank' }, { k: 'Q', l: 'Pompa debisi', u: 'l/dk', d: 60 }, { k: 'tip', l: 'Makine', opts: [['3', 'Sabit (sanayi) — debinin 3 katı'], ['1.5', 'Mobil (iş makinesi) — debinin 1,5 katı']], d: '1.5' },
+      { k: 'Pin', l: 'Pompa motor gücü', u: 'kW', d: 25 },
+      { h: 'Akümülatör (varsa)' }, { k: 'p1', l: 'En düşük çalışma basıncı', u: 'bar', d: 120 }, { k: 'p2', l: 'En yüksek basınç', u: 'bar', d: 180 }, { k: 'dV', l: 'Akümülatörden çekilecek yağ', u: 'litre', d: 2 },
+    ].concat(A_([{ k: 'kay', l: 'Isıya dönen kayıp', u: '%', d: 25, hint: 'Tipik %20–30' }, { k: 'dT', l: 'Yağ – ortam sıcaklık farkı', u: '°C', d: 30 },
+      { k: 'n', l: 'Akümülatör süreci', opts: [['1', 'Yavaş (izotermal)'], ['1.4', 'Hızlı (adyabatik)']], d: '1.4' }])), v => {
+      const out = $('#hyOut'), r = []; let Vt = 0, accS = 0, top = '', cool = null;
       if (ok(v.Q)) {
         const V = v.Q * (num(v.tip) || 1.5), A = 0.065 * Math.pow(V, 2 / 3), Pt = 12 * A * (v.dT || 30) / 1000, Pl = ok(v.Pin) ? v.Pin * (v.kay || 25) / 100 : 0;
+        Vt = V; cool = Pl > Pt ? Pl - Pt : 0;
         r.push(['Önerilen tank hacmi', `${f(V, 0)} litre`], ['Tank yüzeyi (yaklaşık)', `${f(A, 2)} m²`], ['Isıya dönen kayıp', `${f(Pl, 2)} kW`], ['Tankın attığı ısı', `${f(Pt, 2)} kW`],
           ['Soğutucu ihtiyacı', Pl > Pt ? `<b>${f(Pl - Pt, 2)} kW</b> (yağ soğutucusu gerekli)` : badge(true, 'Tank yeterli, soğutucu gerekmez')]);
       }
       if ([v.p1, v.p2, v.dV].every(ok) && v.p2 > v.p1) {
         const n = num(v.n) || 1.4, a1 = v.p1 + 1, a2 = v.p2 + 1, a0 = 0.9 * a1, V0 = v.dV / (Math.pow(a0 / a1, 1 / n) - Math.pow(a0 / a2, 1 / n)), s = nextIn(ACCU, V0);
         r.push(['Ön dolum basıncı (azot)', `${f(a0 - 1, 0)} bar (p1'in %90'ı)`], ['Gereken akümülatör', `${f(V0, 2)} litre → <b>${s ? s + ' l' : 'çok büyük'}</b> (standart)`]);
+        accS = s || 0; top += '';
+        r.accTxt = `Akümülatör <b>${s ? s + ' litre' : 'çok büyük'}</b>, azot ${f(a0 - 1, 0)} bar`;
       }
-      out.innerHTML = r.length ? kv(r) + '<p class="note">Tank yüzey alanı A ≈ 0,065·V^(2/3) ve ısı geçişi ~12 W/m²K varsayımıyla kaba hesaptır. Akümülatör: Boyle–Mariotte, mutlak basınçlarla.</p>' : warnP('Değerleri girin.');
+      if (Vt) { const dm = tank3D($('#hy3d'), { V: Vt, acc: accS }); top = card('Tank', `${f(Vt, 0)} litre`, [`Ölçü ~<b>${f(dm.Lx, 0)} × ${f(dm.Wz, 0)} × ${f(dm.Hy, 0)} mm</b>`].concat(r.accTxt ? [r.accTxt] : [])) +
+        chk([[cool === 0, cool === 0 ? 'Tank yağı soğutmaya yeter, ayrıca soğutucu gerekmez' : `Yağ soğutucusu gerekli: yaklaşık ${f(cool, 1)} kW`]]); }
+      out.innerHTML = r.length ? top + det(kv(r) + '<p class="note">Tank yüzey alanı A ≈ 0,065·V^(2/3) ve ısı geçişi ~12 W/m²K varsayımıyla kaba hesaptır. Akümülatör: Boyle–Mariotte, mutlak basınçlarla.</p>') : warnP('Değerleri girin.');
     });
-    root.innerHTML = F.html + '<div id="hyOut"></div>'; F.bind(root);
+    root.innerHTML = '<div id="hy3d" style="margin-bottom:6px"></div>' + F.html + '<div id="hyOut"></div>'; F.bind(root);
   });
 
   /* ---------- 7. Valf boyutu ---------- */
@@ -389,8 +559,8 @@
     const F = form('valf', [{ k: 'Q', l: 'Valften geçecek en yüksek debi', u: 'l/dk', d: 60, hint: 'Silindir dönüşünde tanka giden debi alan oranı kadar artar!' }], v => {
       const out = $('#hyOut'); if (!ok(v.Q)) { out.innerHTML = warnP('Debiyi girin.'); return; }
       const pick = VALVES.find(x => x[1] * 0.8 >= v.Q) || null;
-      out.innerHTML = table(['Boyut', 'Tipik en yüksek debi', 'Durum'], VALVES.map(([n, q]) => [n, `${q} l/dk`, q * 0.8 >= v.Q ? (pick && pick[0] === n ? '<b>Önerilen</b>' : 'Uygun') : '—'])) +
-        '<p class="note">Valfi tablo değerinin %80\'ine kadar yüklemek basınç kaybını ve ısınmayı düşük tutar. Değerler tipik katalog değerleridir; markaya göre değişir.</p>';
+      out.innerHTML = (pick ? card('Önerilen valf', pick[0], [`${pick[1]} l/dk'ya kadar`]) : warnP('Debi çok yüksek: NG32 de yetmez, iki valf ya da kartuş valf düşünün.')) + det(table(['Boyut', 'Tipik en yüksek debi', 'Durum'], VALVES.map(([n, q]) => [n, `${q} l/dk`, q * 0.8 >= v.Q ? (pick && pick[0] === n ? '<b>Önerilen</b>' : 'Uygun') : '—'])) +
+        '<p class="note">Valfi tablo değerinin %80\'ine kadar yüklemek basınç kaybını ve ısınmayı düşük tutar. Değerler tipik katalog değerleridir; markaya göre değişir.</p>');
     });
     root.innerHTML = F.html + '<div id="hyOut"></div>'; F.bind(root);
   });
@@ -422,10 +592,8 @@
       { k: 'sok', l: 'Söküm + takma işçiliği', u: 'saat', d: 3 }, { k: 'hon', l: 'Honlama', opts: [['1', 'Var'], ['0', 'Yok']], d: '1' },
       { k: 'mil', l: 'Mil', opts: [['0', 'Mil sağlam'], ['krom', 'Mil krom kaplama'], ['yeni', 'Yeni krom mil']], d: 'krom' },
       { k: 'kece', l: 'Keçe seti', opts: [['1', 'Değişecek'], ['0', 'Değişmeyecek']], d: '1' },
-      { k: 'kaynak', l: 'Kaynak / göz tamiri', u: 'saat', d: 0 }, { k: 'parca', l: 'Ek parça (piston, kafa vb.)', u: 'TL', d: 0 },
-      { k: 'test', l: 'Basınç testi', opts: [['1', 'Var'], ['0', 'Yok']], d: '1' }, { k: 'nak', l: 'Nakliye / diğer', u: 'TL', d: 0 },
-      { k: 'garanti', l: 'Garanti süresi', u: 'ay', d: 6 },
-    ], v => {
+      { k: 'test', l: 'Basınç testi', opts: [['1', 'Var'], ['0', 'Yok']], d: '1' }, { k: 'garanti', l: 'Garanti süresi', u: 'ay', d: 6 },
+    ].concat(A_([{ k: 'kaynak', l: 'Kaynak / göz tamiri', u: 'saat', d: 0 }, { k: 'parca', l: 'Ek parça (piston, kafa vb.)', u: 'TL', d: 0 }, { k: 'nak', l: 'Nakliye / diğer', u: 'TL', d: 0 }])), v => {
       const out = $('#hyOut'), L = [];
       if (![v.D, v.d, v.s].every(ok)) { out.innerHTML = warnP('Çap, mil ve stroku girin.'); return; }
       const Lt = v.s + 0.6 * v.D + 50, Lr = v.s + 1.3 * v.D + 60;
@@ -439,7 +607,8 @@
       if (v.test === '1') L.push(['Basınç testi', P('test')]);
       if (ok(v.nak)) L.push(['Nakliye / diğer', v.nak]);
       const c = L.reduce((a, l) => a + l[1], 0);
-      out.innerHTML = table(null, L.map(([n, x]) => [esc(n), tl(x)]).concat([['<b>Maliyet</b>', `<b>${tl(c)}</b>`], ['Gider + kâr ile birim fiyat', `<b>${tl(c * kFactor())}</b>`]]));
+      out.innerHTML = card('Revizyon fiyatı (1 adet)', tl(c * kFactor()), [`${L.length} iş kalemi`, `Garanti <b>${ok(v.garanti) ? v.garanti + ' ay' : 'yok'}</b>`]) +
+        det(table(null, L.map(([n, x]) => [esc(n), tl(x)]).concat([['<b>Maliyet</b>', `<b>${tl(c)}</b>`], ['Gider + kâr ile birim fiyat', `<b>${tl(c * kFactor())}</b>`]])), 'Ayrıntılar: iş kalemleri ve maliyet');
       cur = { v, L };
     });
     let cur = null;
@@ -463,13 +632,13 @@
         <label class="f"><span>Adet</span><div class="in"><input type="number" inputmode="numeric" data-r="${i}" data-c="n" value="${r.n}"></div></label>
         <label class="f"><span>Spiral</span><div class="in"><select data-r="${i}" data-c="sp"><option value="0"${!+r.sp ? ' selected' : ''}>Yok</option><option value="1"${+r.sp ? ' selected' : ''}>Var</option></select></div></label>
         <button class="btn ghost" data-del="${i}" style="align-self:end">Sil</button></div>`).join('');
-      root.innerHTML = `<p class="note">Her satır bir hortum takımıdır (iki uçta pres rakor). Fiyatlar Hidrolik → Fiyatlar'dan değişir.</p>${rows}
+      root.innerHTML = `<div id="hy3d" style="margin-bottom:6px"></div><p class="note">Her satır bir hortum takımıdır (iki uçta pres rakor). Fiyatlar Hidrolik → Fiyatlar'dan değişir.</p>${rows}
         <div class="row" style="margin-top:8px"><button class="btn" id="hyAdd">Satır ekle</button></div><div id="hyOut"></div>
         <div class="row" style="margin-top:10px"><button class="btn tape" id="hyQ">Teklif hazırla</button><button class="btn ghost" id="hyT">Test raporu + QR</button></div>`;
       root.querySelectorAll('[data-r]').forEach(i => i.onchange = i.oninput = () => { const r = st[+i.dataset.r]; r[i.dataset.c] = i.dataset.c === 't' ? i.value : num(i.value); if (i.dataset.c === 't' && !HOSES[r.t].rows.some(x => x[0] === +r.dn)) { r.dn = HOSES[r.t].rows[0][0]; } H().store.set('hyd.in.hortumImalat.rows', st); if (i.dataset.c === 't') draw(); else calc(); });
       root.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { st.splice(+b.dataset.del, 1); if (!st.length) st.push({ t: '2SN', dn: 12, L: 1, n: 1, sp: 0 }); H().store.set('hyd.in.hortumImalat.rows', st); draw(); });
       $('#hyAdd').onclick = () => { st.push({ ...st[st.length - 1] }); H().store.set('hyd.in.hortumImalat.rows', st); draw(); };
-      $('#hyQ').onclick = () => { const L = lines(); H().openQuote(serviceQuote({ title: 'Hidrolik hortum imalatı', part: `${st.reduce((a, r) => a + (r.n || 0), 0)} adet hortum takımı`, meta: [['Takımlar', st.map(r => `${r.n}× ${r.t} DN${r.dn} ${f(r.L, 2)} m`).join(', ')]], lines: L })); };
+      $('#hyQ').onclick = () => { const L = lines(); H().openQuote(serviceQuote({ title: 'Hidrolik hortum imalatı', part: `${st.reduce((a, r) => a + (r.n || 0), 0)} adet hortum takımı`, meta: [['Takımlar', st.map(r => `${r.n}× ${r.t} DN${r.dn} ${f(r.L, 2)} m`).join(', ')]], lines: L, shot: snap3() })); };
       $('#hyT').onclick = () => { const r = st[0], h = HOSES[r.t].rows.find(x => x[0] === +r.dn); openTool('test', { vals: S_({ tanim: `Hortum ${r.t} DN${r.dn} × ${f(r.L, 2)} m`, pw: h ? h[2] : undefined, tip: '2' }) }); };
       calc();
     };
@@ -477,24 +646,39 @@
       const m = HOSE_MULT[r.t] || 1, hose = P('hortumK') * m * r.dn * r.L, fit = 2 * (P('rakorA') + P('rakorB') * r.dn * Math.sqrt(m)), lab = 2 * P('presleme'), sp = +r.sp ? P('spiral') * r.L : 0;
       return [`${r.n} × ${r.t} DN${r.dn} × ${f(r.L, 2)} m (hortum ${tl(hose)}, 2 rakor ${tl(fit)}, presleme ${tl(lab)}${sp ? ', spiral ' + tl(sp) : ''})`, (hose + fit + lab + sp) * r.n];
     });
-    const calc = () => { const L = lines(), c = L.reduce((a, l) => a + l[1], 0); $('#hyOut').innerHTML = table(null, L.map(([n, x]) => [esc(n), tl(x)]).concat([['<b>Maliyet</b>', `<b>${tl(c)}</b>`], ['Gider + kâr ile', `<b>${tl(c * kFactor())}</b>`]])); };
+    const calc = () => {
+      const L = lines(), c = L.reduce((a, l) => a + l[1], 0), r0 = st[0], h0 = r0 && HOSES[r0.t].rows.find(x => x[0] === +r0.dn);
+      if (h0) hose3D($('#hy3d'), { d: h0[1], R: h0[3], L: Math.min((ok(r0.L) ? r0.L : 1) * 1000, h0[3] * 6) });
+      const o = $('#hyOut'), open = o.querySelector('details') && o.querySelector('details').open;
+      o.innerHTML = card('Teklif tutarı (KDV hariç)', tl(c * kFactor()), [`${st.reduce((a, r) => a + (r.n || 0), 0)} hortum takımı`]) + det(table(null, L.map(([n, x]) => [esc(n), tl(x)]).concat([['<b>Maliyet</b>', `<b>${tl(c)}</b>`], ['Gider + kâr ile', `<b>${tl(c * kFactor())}</b>`]])), 'Ayrıntılar: kalem kalem maliyet');
+      if (open) o.querySelector('details').open = true;
+    };
     draw();
   });
 
   /* ---------- 11. Kova imalat teklifi ---------- */
   tool('kova', 'Teklif', 'Kova imalat teklifi', 'Sac ağırlıkları, diş/adaptör, kaynak, boya; SAE J296 kapasite tahmini', root => {
     const F = form('kova', [
-      { h: 'Hızlı tahmin' }, { k: 'ton', l: 'Makine tonajı', u: 'ton', d: 20 }, { k: 'Vh', l: 'İstenen kova hacmi (tepeleme)', u: 'm³', d: 1.0 },
-      { note: 'Tonaj ve hacmi yazıp "Tahmini ölçüleri doldur"a basın; aşağıdaki ölçüler tipik oranlarla dolar, siz düzeltirsiniz.' },
-      { h: 'Kova ölçüleri' }, { k: 'W', l: 'İç genişlik', u: 'mm', d: 1000 }, { k: 'Ls', l: 'Sarım (alt+sırt) sac açınım boyu', u: 'mm', d: 1600 }, { k: 't1', l: 'Sarım sacı kalınlığı', u: 'mm', d: 10 },
+      { k: 'ton', l: 'Makine tonajı', u: 'ton', d: 20 }, { k: 'Vh', l: 'Kova hacmi', u: 'm³', d: 1.0, hint: 'Tepeleme (kabarık) hacim' },
+      { k: 'oto', l: 'Sac ölçüleri', opts: [['1', 'Otomatik (tonaj ve hacimden tahmin)'], ['0', 'Elle girdiğim ölçüler']], d: '1', wide: true },
+    ].concat(A_([
+      { note: '"Otomatik" seçiliyken bu ölçüler tonaj ve hacimden tahminle dolar. Kendi ölçünüzü girmek için yukarıdan "Elle girdiğim ölçüler"i seçin.' },
+      { k: 'W', l: 'İç genişlik', u: 'mm', d: 1000 }, { k: 'Ls', l: 'Sarım (alt+sırt) sac açınım boyu', u: 'mm', d: 1600 }, { k: 't1', l: 'Sarım sacı kalınlığı', u: 'mm', d: 10 },
       { k: 'Ay', l: 'Bir yan sacın alanı', u: 'cm²', d: 3200, hint: 'Yan profil çiziminden; bilinmiyorsa derinlik × boy × 0,75' }, { k: 't2', l: 'Yan sac kalınlığı', u: 'mm', d: 12 },
       { k: 'bh', l: 'Bıçak yüksekliği', u: 'mm', d: 200 }, { k: 't3', l: 'Bıçak kalınlığı', u: 'mm', d: 25 }, { k: 'kul', l: 'Kulak, göz, takviyeler', u: 'kg', d: 60 },
       { k: 'nd', l: 'Diş sayısı', u: 'adet', d: 5 }, { k: 'hk', l: 'Kesim + büküm + kaynak', u: 'saat', d: 14 }, { k: 'hard', l: 'Aşınma sacı (Hardox) kullanılan', opts: [['bicak', 'Yalnız bıçak'], ['bicak+sarim', 'Bıçak + sarım'], ['hepsi', 'Hepsi']], d: 'bicak+sarim' },
-      { h: 'Kapasite tahmini (isteğe bağlı)' }, { k: 'Ap', l: 'Yan profil iç alanı', u: 'cm²', d: 2800 }, { k: 'ao', l: 'Ağız açıklığı (bıçak–arka kenar)', u: 'mm', d: 900 },
-    ], v => calc(v));
+      { k: 'Ap', l: 'Yan profil iç alanı', u: 'cm²', d: 2800 }, { k: 'ao', l: 'Ağız açıklığı (bıçak–arka kenar)', u: 'mm', d: 900 },
+    ])), v => calc(v), 'Kova ölçüleri (açıp düzeltebilirsiniz)');
     let cur = null;
-    root.innerHTML = F.html + '<div id="hyOut"></div><div class="row" style="margin-top:10px"><button class="btn tape" id="hyQ">Teklif hazırla</button><button class="btn" id="hyE">Tahmini ölçüleri doldur</button><button class="btn ghost" id="hyK">Kaldırma kapasitesine aktar</button></div>' + templateBar('kova');
+    root.innerHTML = '<div id="hy3d" style="margin-bottom:6px"></div>' + F.html + '<div id="hyOut"></div><div class="row" style="margin-top:10px"><button class="btn tape" id="hyQ">Teklif hazırla</button><button class="btn ghost" id="hyK">Kaldırma kapasitesine aktar</button></div>' + templateBar('kova');
+    const est = (T, V) => { // tipik oranlar (kaba): genişlik ~ V^0,45, sac kalınlığı tonajla artar
+      const W = Math.round(1150 * Math.pow(V, 0.45) / 10) * 10, Ap = V / 1.2 / (W / 1000), Ls = Math.round(1.9 * Math.sqrt(Ap / 0.75) * 1000 / 10) * 10, t1 = Math.min(25, Math.max(5, Math.round(5 + 0.3 * T)));
+      return { W, Ls, t1, t2: t1 + 2, Ay: Math.round(Ap * 1.15 * 1e4 / 10) * 10, Ap: Math.round(Ap * 1e4 / 10) * 10, ao: Math.round(Math.sqrt(Ap) * 1100 / 10) * 10,
+        bh: Math.round((150 + 5 * T) / 10) * 10, t3: Math.min(40, Math.round(t1 * 2)), kul: Math.round(25 * Math.pow(T, 0.8)), nd: Math.max(3, Math.round(W / 220)), hk: Math.round(6 + 0.5 * T) };
+    };
     function calc(v) {
+      if (v.oto !== '0' && ok(v.ton) && ok(v.Vh)) { const e = est(v.ton, v.Vh); Object.assign(v, e); const st = saved('kova'); for (const k in e) { st[k] = String(e[k]); const i = root.querySelector(`[data-hk="${k}"]`); if (i) i.value = e[k]; } H().store.set('hyd.in.kova', st); }
+      root.querySelectorAll('.hyadv [data-hk]').forEach(i => { i.disabled = v.oto !== '0' && !['hard', 'hk'].includes(i.dataset.hk); });
       const rho = 7.85e-6, mS = rho * v.W * v.Ls * v.t1, mY = 2 * rho * v.Ay * 100 * v.t2, mB = rho * v.W * v.bh * v.t3, mK = ok(v.kul) ? v.kul : 0;
       const hx = v.hard, pr = (isH) => isH ? P('hardox') : P('st52');
       const L = [[`Sarım sacı ${v.W}×${v.Ls}×${v.t1} (${f(mS, 0)} kg)`, mS * pr(hx !== 'bicak')], [`Yan saclar 2×${f(v.Ay, 0)} cm² × ${v.t2} (${f(mY, 0)} kg)`, mY * pr(hx === 'hepsi')],
@@ -504,21 +688,15 @@
       const kg = mS + mY + mB + mK, c = L.reduce((a, l) => a + l[1], 0);
       let cap = '';
       if (ok(v.Ap) && ok(v.W)) { const Vs = v.Ap * 100 * v.W / 1e9, a = (v.ao || 0) / 1000, b = v.W / 1000, Vh = Vs + (b * a * a) / 4 - (a ** 3) / 12; cap = kv([['Düz (struck) kapasite', `${f(Vs, 3)} m³`], ['Tepeleme (heaped, 1:1) kapasite', ok(v.ao) ? `${f(Vh, 3)} m³` : '-']]) + '<p class="note">SAE J296 yaklaşımı; yan profil iç alanı × iç genişlik. Kesin değer için standarttaki ölçüm yöntemi uygulanmalıdır.</p>'; }
-      $('#hyOut').innerHTML = `<div class="plate" style="margin-top:12px"><div class="lbl">Kova ağırlığı (yaklaşık)</div><div class="big">${f(kg, 0)} kg</div></div>` +
-        table(null, L.map(([n, x]) => [esc(n), tl(x)]).concat([['<b>Maliyet</b>', `<b>${tl(c)}</b>`], ['Gider + kâr ile', `<b>${tl(c * kFactor())}</b>`]])) + cap;
+      kova3D($('#hy3d'), { W: v.W, Ap: (ok(v.Ap) ? v.Ap : v.Ay / 1.15) * 100, t1: v.t1, t2: v.t2, bh: v.bh, t3: v.t3, nd: v.nd });
+      $('#hyOut').innerHTML = card('Kova', `${f(kg, 0)} kg${ok(v.Vh) ? ' · ' + f(v.Vh, 2) + ' m³' : ''}`, [`Fiyat <b>${tl(c * kFactor())}</b>`, `Genişlik <b>${f(v.W, 0)} mm</b>`, `${v.nd || 0} diş`]) +
+        (v.oto !== '0' ? chk([[null, 'Ölçüler tonaj ve hacimden tahmin edildi. Gerçek ölçünüz varsa "Sac ölçüleri"nden "Elle girdiğim ölçüler"i seçip düzeltin.']]) : '') +
+        det(table(null, L.map(([n, x]) => [esc(n), tl(x)]).concat([['<b>Maliyet</b>', `<b>${tl(c)}</b>`], ['Gider + kâr ile', `<b>${tl(c * kFactor())}</b>`]])) + cap, 'Ayrıntılar: sac ağırlıkları, maliyet, kapasite');
       cur = { v, L, kg };
     }
     F.bind(root); bindTemplates(root, 'kova');
-    root.querySelector('#hyE').onclick = () => { // tipik oranlar (kaba): genişlik ~ V^0,45, sac kalınlığı tonajla artar
-      const v = saved('kova'), T = num(v.ton), V = num(v.Vh); if (!ok(T) || !ok(V)) { H().toast('Tonaj ve hacmi girin'); return; }
-      const W = Math.round(1150 * Math.pow(V, 0.45) / 10) * 10, Ap = V / 1.2 / (W / 1000), Ls = Math.round(1.9 * Math.sqrt(Ap / 0.75) * 1000 / 10) * 10;
-      const t1 = Math.min(25, Math.max(5, Math.round(5 + 0.3 * T))), cl = x => Math.min(40, x);
-      H().store.set('hyd.in.kova', Object.assign(v, S_({ W, Ls, t1, t2: t1 + 2, Ay: Math.round(Ap * 1.15 * 1e4 / 10) * 10, Ap: Math.round(Ap * 1e4 / 10) * 10, ao: Math.round(Math.sqrt(Ap) * 1100 / 10) * 10,
-        bh: Math.round((150 + 5 * T) / 10) * 10, t3: cl(Math.round(t1 * 2)), kul: Math.round(25 * Math.pow(T, 0.8)), nd: Math.max(3, Math.round(W / 220)), hk: Math.round(6 + 0.5 * T) })));
-      openTool('kova'); H().toast('Tahmini ölçüler dolduruldu; kontrol edip düzeltin');
-    };
     root.querySelector('#hyK').onclick = () => { if (!cur) return; const q = H().store.get('kal.quick', {}); q.m2 = String(Math.round(cur.kg)); if (ok(num(saved('kova').Vh))) q.V2 = saved('kova').Vh; H().store.set('kal.quick', q); H().store.set('kal.mode', 'quick'); openTool('kaldirma'); H().toast('Yeni kova ağırlığı aktarıldı'); };
-    $('#hyQ').onclick = () => { if (!cur) return; H().openQuote(serviceQuote({ title: 'Kova imalatı', part: `Kova ${cur.v.W} mm`, mat: 'Hardox / S355', meta: [['İç genişlik', `${cur.v.W} mm`], ['Ağırlık', `~${f(cur.kg, 0)} kg`]], lines: cur.L })); };
+    $('#hyQ').onclick = () => { if (!cur) return; H().openQuote(serviceQuote({ title: 'Kova imalatı', part: `Kova ${cur.v.W} mm`, mat: 'Hardox / S355', meta: [['İç genişlik', `${cur.v.W} mm`], ['Hacim', ok(cur.v.Vh) ? `${f(cur.v.Vh, 2)} m³` : '-'], ['Ağırlık', `~${f(cur.kg, 0)} kg`]], lines: cur.L, shot: snap3() })); };
   });
 
   /* ---------- 12. Basınç testi raporu + QR ---------- */
@@ -628,7 +806,7 @@
       const out = $('#hyOut'), a = String(v.kod).split('/').map(x => parseInt(x, 10)), b = String(v.hedef).split('/').map(x => parseInt(x, 10));
       if (a.length !== 3 || a.some(isNaN)) { out.innerHTML = warnP('Kodu 19/17/14 biçiminde girin.'); return; }
       const diff = Math.max(...a.map((x, i) => x - b[i]));
-      out.innerHTML = kv([['Durum', diff <= 0 ? badge(true, 'Hedef içinde') : badge(false, `Hedefin ${diff} sınıf üstünde (her sınıf ≈ 2 kat daha fazla parçacık)`)], ['Öneri', diff <= 0 ? 'Mevcut filtrasyonu sürdürün.' : diff <= 2 ? 'Filtre elemanını değiştirin, havalandırma filtresini kontrol edin, tekrar ölçün.' : 'Yağı süzün ya da değiştirin, filtre inceliğini (β değeri) artırın, kirlilik kaynağını (keçe, tank kapağı) arayın.']]) +
+      out.innerHTML = card('Yağ temizliği', diff <= 0 ? '✓ Temiz (hedef içinde)' : `✗ Kirli (${diff} sınıf fazla)`) + kv([['Durum', diff <= 0 ? badge(true, 'Hedef içinde') : badge(false, `Hedefin ${diff} sınıf üstünde (her sınıf ≈ 2 kat daha fazla parçacık)`)], ['Öneri', diff <= 0 ? 'Mevcut filtrasyonu sürdürün.' : diff <= 2 ? 'Filtre elemanını değiştirin, havalandırma filtresini kontrol edin, tekrar ölçün.' : 'Yağı süzün ya da değiştirin, filtre inceliğini (β değeri) artırın, kirlilik kaynağını (keçe, tank kapağı) arayın.']]) +
         (v.mak !== '' ? (() => { const m = db.mak[+v.mak], y = (m && m.yag) || []; return `<div class="row" style="margin-top:8px"><button class="btn" id="yKay">Bu ölçümü makineye kaydet</button></div>` + (y.length ? table(['Tarih', 'Kod'], y.map(r => [new Date(r.t).toLocaleDateString('tr-TR'), r.k])) : ''); })() : '');
       const kb = $('#yKay'); if (kb) kb.onclick = () => { const m = db.mak[+v.mak]; (m.yag = m.yag || []).unshift({ t: new Date().toISOString(), k: v.kod }); H().store.set('hyd.bakim', db); H().toast('Kaydedildi'); kb.closest('#hyOut') && F.bind(root); };
     });
@@ -662,11 +840,12 @@
   ];
   tool('rakor', 'Rehber', 'Rakor diş tanıma', 'Ölçülen diş çapından BSP, JIC, ORFS, metrik L/S tanıma', root => {
     const F = form('rakor', [{ k: 'od', l: 'Ölçülen diş dış çapı (kumpasla)', u: 'mm', d: 20.9 }], v => {
-      const out = $('#hyOut'); if (!ok(v.od)) { out.innerHTML = ''; return; }
+      const out = $('#hyOut'); if (!ok(v.od)) { out.innerHTML = ''; $('#hySvg').innerHTML = rakorSVG(null); return; }
       const c = THREADS.filter(t => Math.abs(t[2] - v.od) <= 0.6).sort((a, b) => Math.abs(a[2] - v.od) - Math.abs(b[2] - v.od));
-      out.innerHTML = c.length ? table(['Aile', 'Ölçü', 'Diş Ø', 'Hatve'], c.map(t => [esc(t[0]), esc(t[1]), f(t[2], 2), t[3]])) + '<p class="note">Aynı çapa yakın birden fazla aile çıkarsa hatveyi diş tarağıyla ölçün ve sızdırmazlık şekline bakın: BSP 60° koni ya da düz yüz, JIC 37° havşa, ORFS düz yüzde O-ring, metrik 24° koni.</p>' : warnP('±0,6 mm içinde eşleşme yok; ölçümü tekrarlayın.');
+      $('#hySvg').innerHTML = rakorSVG(c.map(t => t[0]));
+      out.innerHTML = c.length ? card('En yakın eşleşme', `${esc(c[0][0].split(' (')[0])} ${esc(c[0][1])}`, [`Diş Ø ${f(c[0][2], 2)} mm`, c[0][3]]) + table(['Aile', 'Ölçü', 'Diş Ø', 'Hatve'], c.map(t => [esc(t[0]), esc(t[1]), f(t[2], 2), t[3]])) + '<p class="note">Aynı çapa yakın birden fazla aile çıkarsa hatveyi diş tarağıyla ölçün ve sızdırmazlık şekline bakın: BSP 60° koni ya da düz yüz, JIC 37° havşa, ORFS düz yüzde O-ring, metrik 24° koni.</p>' : warnP('±0,6 mm içinde eşleşme yok; ölçümü tekrarlayın.');
     });
-    root.innerHTML = F.html + '<div id="hyOut"></div><h3>Tüm tablo</h3>' + table(['Aile', 'Ölçü', 'Diş Ø (mm)', 'Hatve'], THREADS.map(t => [esc(t[0]), esc(t[1]), f(t[2], 2), t[3]]));
+    root.innerHTML = '<p class="note" style="margin-top:0">Rakorun ağız şekline bakın; çapını ölçünce uygun aileler sarı çerçeveyle işaretlenir.</p><div id="hySvg" style="margin-bottom:10px"></div>' + F.html + '<div id="hyOut"></div>' + det(table(['Aile', 'Ölçü', 'Diş Ø (mm)', 'Hatve'], THREADS.map(t => [esc(t[0]), esc(t[1]), f(t[2], 2), t[3]])), 'Tüm diş tablosu');
     F.bind(root);
   });
 
