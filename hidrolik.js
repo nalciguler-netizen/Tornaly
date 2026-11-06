@@ -131,28 +131,57 @@
       scene.add(new THREE.HemisphereLight(0xffffff, 0x56656e, 1.0));
       const dl = new THREE.DirectionalLight(0xffffff, 0.7); dl.position.set(1, 1.5, 1); scene.add(dl);
       r3 = { cv, R, scene, cam, grp: null, th: 0.6, ph: 1.2, r: 1000 };
-      let last = null;
-      cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); last = [e.clientX, e.clientY]; });
-      cv.addEventListener('pointermove', e => { if (!last) return; r3.th -= (e.clientX - last[0]) * 0.01; r3.ph = Math.max(0.2, Math.min(2.9, r3.ph - (e.clientY - last[1]) * 0.01)); last = [e.clientX, e.clientY]; place(); });
-      cv.addEventListener('pointerup', () => { last = null; });
+      r3.z = 1;
+      // tek parmak: döndür · iki parmak: yakınlaştır/uzaklaştır · tekerlek: yakınlaştır
+      const pts = new Map(); let last = null, pinch = null;
+      cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]);
+        if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, z: r3.z }; last = null; } else last = [e.clientX, e.clientY]; });
+      cv.addEventListener('pointermove', e => { if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
+        if (pinch && pts.size === 2) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); r3.z = Math.max(0.15, Math.min(4, pinch.z * pinch.d / (d || 1))); place(); return; }
+        if (!last) return; r3.th -= (e.clientX - last[0]) * 0.01; r3.ph = Math.max(0.2, Math.min(2.9, r3.ph - (e.clientY - last[1]) * 0.01)); last = [e.clientX, e.clientY]; place(); });
+      const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; last = pts.size === 1 ? [...pts.values()][0] : null; };
+      cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+      cv.addEventListener('wheel', e => { e.preventDefault(); r3.z = Math.max(0.15, Math.min(4, r3.z * (e.deltaY > 0 ? 1.12 : 1 / 1.12))); place(); }, { passive: false });
+      // kutu + düğmeler (büyüt / tam ekran, +, −, sıfırla)
+      const box = document.createElement('div'); box.style.cssText = 'position:relative'; box.appendChild(cv);
+      const bar = document.createElement('div'); bar.style.cssText = 'position:absolute;top:6px;right:6px;display:flex;gap:4px;z-index:2';
+      const mk = (t, title, fn) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.title = title; b.setAttribute('aria-label', title);
+        b.style.cssText = 'min-width:36px;height:36px;border-radius:8px;border:1px solid #c9d3da;background:rgba(255,255,255,.92);color:#1c2830;font:600 16px/1 inherit;padding:0 8px;cursor:pointer'; b.onclick = fn; bar.appendChild(b); return b; };
+      mk('+', 'Yakınlaştır', () => { r3.z = Math.max(0.15, r3.z / 1.25); place(); });
+      mk('−', 'Uzaklaştır', () => { r3.z = Math.min(4, r3.z * 1.25); place(); });
+      mk('⟲', 'Görünümü sıfırla', () => { r3.z = 1; if (r3.home) { r3.th = r3.home[0]; r3.ph = r3.home[1]; } place(); });
+      r3.fs = mk('⛶ Büyüt', 'Tam ekran', () => setFull(!r3.full));
+      box.appendChild(bar);
+      const hint = document.createElement('div'); hint.textContent = 'Parmakla çevirin · iki parmakla büyütün'; hint.style.cssText = 'position:absolute;left:8px;bottom:6px;font-size:11px;color:#566771;background:rgba(255,255,255,.75);padding:2px 6px;border-radius:6px;pointer-events:none';
+      box.appendChild(hint); r3.box = box;
+      const setFull = on => { r3.full = on;
+        box.style.cssText = on ? 'position:fixed;inset:0;z-index:1000;background:#eef3f6;padding:8px;box-sizing:border-box' : 'position:relative';
+        cv.style.height = on ? 'calc(100vh - 16px)' : (r3.h || 240) + 'px'; r3.fs.textContent = on ? '✕ Kapat' : '⛶ Büyüt';
+        document.body.style.overflow = on ? 'hidden' : ''; place(); };
+      r3.setFull = setFull;
+      window.addEventListener('resize', () => place());
     }
-    r3.cv.style.height = h + 'px';
-    if (r3.cv.parentNode !== host) { host.innerHTML = ''; host.appendChild(r3.cv); }
+    r3.h = h; if (r3.full) r3.setFull(false); r3.cv.style.height = h + 'px';
+    if (r3.box.parentNode !== host) { host.innerHTML = ''; host.appendChild(r3.box); }
     const { scene } = r3;
     if (r3.grp) { scene.remove(r3.grp); r3.grp.traverse(o => o.geometry && o.geometry.dispose()); }
     const wrap = new THREE.Group(), grp = new THREE.Group(); wrap.add(grp);
     const o = build(grp, mats()) || {};
-    if (o.th !== undefined && r3.view !== o.view) { r3.th = o.th; r3.ph = o.ph ?? r3.ph; r3.view = o.view; }
+    const sameView = r3.view === o.view;
+    if (o.th !== undefined && !sameView) { r3.th = o.th; r3.ph = o.ph ?? r3.ph; r3.view = o.view; r3.z = 1; r3.home = [o.th, o.ph ?? r3.ph]; }
     const box = new THREE.Box3().setFromObject(wrap), c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3());
     grp.position.sub(c);
-    scene.add(wrap); r3.grp = wrap; r3.r = sz.length() / 2 / Math.sin(15 * PI / 180) * (o.fit || 1) || 1000;
+    const nr = sz.length() / 2 / Math.sin(15 * PI / 180) * (o.fit || 1) || 1000;
+    scene.add(wrap); r3.grp = wrap; if (!(sameView && r3.r && nr <= r3.r && nr > r3.r * 0.65)) r3.r = nr;
     place();
   }
   function place() {
     if (!r3) return;
     const w = r3.cv.clientWidth || 320, h = r3.cv.clientHeight || 240;
     r3.R.setSize(w, h, false); r3.cam.aspect = w / h; r3.cam.near = r3.r / 100; r3.cam.far = r3.r * 10; r3.cam.updateProjectionMatrix();
-    r3.cam.position.set(r3.r * Math.sin(r3.ph) * Math.sin(r3.th), r3.r * Math.cos(r3.ph), r3.r * Math.sin(r3.ph) * Math.cos(r3.th));
+    const rr = r3.r * (r3.z || 1);
+    r3.cam.near = rr / 100; r3.cam.far = rr * 10; r3.cam.updateProjectionMatrix();
+    r3.cam.position.set(rr * Math.sin(r3.ph) * Math.sin(r3.th), rr * Math.cos(r3.ph), rr * Math.sin(r3.ph) * Math.cos(r3.th));
     r3.cam.lookAt(0, 0, 0); r3.R.render(r3.scene, r3.cam);
   }
   const snap3 = () => { if (!r3 || !r3.grp) return ''; r3.R.setClearColor(0xffffff, 1); r3.R.render(r3.scene, r3.cam); const u = r3.cv.toDataURL('image/jpeg', 0.8); r3.R.setClearColor(0x000000, 0); r3.R.render(r3.scene, r3.cam); return u; };
@@ -231,7 +260,7 @@
   // Revizyon: silindir, yapılacak işler renkle (boru honlama, mil, keçeler)
   function rev3D(host, g) {
     view3D(host, (grp, M) => {
-      const { D, d, s, hon, mil, kece } = g, OD = D * 1.18, Lt = s + 0.6 * D + 50, ext = s * 0.45, eye = Math.max(12, d * 0.45);
+      const { D, d, s, hon, mil, kece } = g, OD = D * 1.18, Lt = s + 0.6 * D + 50, ext = Math.max(1, s * (g.e ?? 0.45)), eye = Math.max(12, d * 0.45);
       const C = (c, o) => new THREE.MeshStandardMaterial(Object.assign({ color: c, metalness: 0.3, roughness: 0.45, side: THREE.DoubleSide }, o || {}));
       const blue = 0x2b6683, red = 0xa3262a;
       grp.add(lathe([[D / 2, 0], [OD / 2, 0], [OD / 2, Lt], [D / 2, Lt]], C(hon ? blue : 0xf2b705, { transparent: true, opacity: 0.35, depthWrite: false }), 64));
@@ -487,7 +516,7 @@
       { k: 'hIs', l: 'Talaşlı işleme (0 = tahmini)', u: 'saat', d: 0 },
       { k: 'hKa', l: 'Kaynak (0 = tahmini)', u: 'saat', d: 0 }, { k: 'hMo', l: 'Montaj + test (0 = tahmini)', u: 'saat', d: 0 },
     ])), v => calc(v));
-    root.innerHTML = '<div id="hy3d" style="margin-bottom:6px"></div><div id="hyHead"></div>' + F.html + '<div id="hyOut"></div><div id="hyNext"></div>';
+    root.innerHTML = '<div id="hy3d"></div><div id="hySl" style="margin-bottom:6px"></div><div id="hyHead"></div>' + F.html + '<div id="hyOut"></div><div id="hyNext"></div>';
     let last = null;
     function calc(v) {
       const showF = (k, on) => { const e = root.querySelector(`[data-hk="${k}"]`); if (e) e.closest('label').hidden = !on; };
@@ -551,7 +580,10 @@
           ['Pompa gücü / elektrik motoru', ok(Q) ? `${f(Pkw, 2)} kW → ${mot ? mot + ' kW motor' : 'çok büyük'}` : '-'],
         ]) + `<h3>Kaba maliyet (1 adet, gider ve kâr hariç)</h3>` + table(null, lines.map(([n, x]) => [esc(n), tl(x)]).concat([['<b>Toplam maliyet</b>', `<b>${tl(cost)}</b>`], [`Genel gider + kâr ile birim fiyat`, `<b>${tl(cost * kFactor())}</b>`]])) +
         `<p class="note">Ön hesaptır. Kafa/piston ölçüleri, kaynak ve keçe tipi tasarıma göre değişir; nihai tasarım ve basınç testi zorunludur. Fiyatlar Hidrolik → Fiyatlar'dan değiştirilir.</p>`);
-      cyl3D($('#hy3d'), { D, OD, d, Lt, ext: stroke * 0.6, eye: Math.max(12, d * 0.45) });
+      const ef = H().store.get('hyd.cylExt', 0.6), g3 = { D, OD, d, Lt, ext: stroke * ef, eye: Math.max(12, d * 0.45) };
+      cyl3D($('#hy3d'), g3);
+      $('#hySl').innerHTML = `<label class="f" style="margin-top:4px"><span>Mili aç / kapat — <b id="hyExtV">${f(stroke * ef, 0)} mm açık</b></span><input type="range" min="0" max="1000" value="${Math.round(ef * 1000)}" id="hyExt" style="width:100%"></label>`;
+      $('#hyExt').oninput = () => { const e = $('#hyExt').value / 1000; H().store.set('hyd.cylExt', e); g3.ext = Math.max(1, stroke * e); cyl3D($('#hy3d'), g3); $('#hyExtV').textContent = `${f(stroke * e, 0)} mm açık`; };
       $('#hyHead').innerHTML = '';
       out.querySelectorAll('[data-pp]').forEach(b => b.onclick = () => { const i = root.querySelector('[data-hk="p"]'); i.value = b.dataset.pp; i.dispatchEvent(new Event('input')); });
       const ad = `Hidrolik silindir Ø${D}/Ø${d} × ${f(stroke, 0)}`;
@@ -791,7 +823,10 @@
       if (v.test === '1') L.push(['Basınç testi', P('test')]);
       if (ok(v.nak)) L.push(['Nakliye / diğer', v.nak]);
       const c = L.reduce((a, l) => a + l[1], 0);
-      rev3D($('#hy3d'), { D: v.D, d: v.d, s: v.s, hon: v.hon === '1', mil: v.mil, kece: v.kece === '1' });
+      const re = H().store.get('hyd.revExt', 0.45), rg = { D: v.D, d: v.d, s: v.s, hon: v.hon === '1', mil: v.mil, kece: v.kece === '1', e: re };
+      rev3D($('#hy3d'), rg);
+      $('#hySl').innerHTML = `<label class="f" style="margin-top:4px"><span>Mili aç / kapat — <b id="hyExtV">${f(v.s * re, 0)} mm açık</b></span><input type="range" min="0" max="1000" value="${Math.round(re * 1000)}" id="hyExt" style="width:100%"></label>`;
+      $('#hyExt').oninput = () => { const e = $('#hyExt').value / 1000; H().store.set('hyd.revExt', e); rg.e = e; rev3D($('#hy3d'), rg); $('#hyExtV').textContent = `${f(v.s * e, 0)} mm açık`; };
       const jobs = [v.hon === '1' && '<b style="color:var(--steel)">mavi boru</b> = honlanacak', v.mil === 'krom' && '<b style="color:var(--steel)">mavi mil</b> = krom kaplanacak', v.mil === 'yeni' && '<b style="color:var(--err)">kırmızı mil</b> = yenisi takılacak', v.kece === '1' && '<b style="color:var(--err)">kırmızı halkalar</b> = keçeler değişecek'].filter(Boolean);
       $('#hyLeg').innerHTML = `<p class="note" style="margin:4px 0 8px">Resim: müşterinin silindiri (boru saydam, içinde piston görünür). ${jobs.length ? jobs.join(' · ') : 'Yapılacak iş seçilmedi.'}</p>`;
       out.innerHTML = card('Revizyon fiyatı (1 adet)', tl(c * kFactor()), [`${L.length} iş kalemi`, `Garanti <b>${ok(v.garanti) ? v.garanti + ' ay' : 'yok'}</b>`]) +
@@ -799,7 +834,7 @@
       cur = { v, L };
     });
     let cur = null;
-    root.innerHTML = '<div id="hy3d"></div><div id="hyLeg"></div>' + F.html + '<div id="hyOut"></div><div class="row" style="margin-top:10px"><button class="btn tape" id="hyQ">Teklif hazırla</button><button class="btn ghost" id="hyT">Test raporu + QR</button><button class="btn ghost" id="hyH">Hortum seç</button></div>' + templateBar('revizyon');
+    root.innerHTML = '<div id="hy3d"></div><div id="hySl"></div><div id="hyLeg"></div>' + F.html + '<div id="hyOut"></div><div class="row" style="margin-top:10px"><button class="btn tape" id="hyQ">Teklif hazırla</button><button class="btn ghost" id="hyT">Test raporu + QR</button><button class="btn ghost" id="hyH">Hortum seç</button></div>' + templateBar('revizyon');
     F.bind(root); bindTemplates(root, 'revizyon');
     $('#hyQ').onclick = () => { if (!cur) return; const v = cur.v;
       H().openQuote(serviceQuote({ title: 'Hidrolik silindir revizyonu', part: `${v.makine || 'Silindir'} Ø${v.D}/Ø${v.d} × ${f(v.s, 0)}`, qty: ok(v.adet) ? Math.round(v.adet) : 1,

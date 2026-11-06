@@ -103,6 +103,8 @@ label.chk input{width:20px;height:20px;accent-color:var(--ink)}
   linear-gradient(var(--line) 1px,transparent 1px) 0 0/24px 24px,
   linear-gradient(90deg,var(--line) 1px,transparent 1px) 0 0/24px 24px,var(--surface);border:1px solid var(--line);touch-action:none}
 .viewer canvas{display:block;width:100%;height:100%}
+.viewer.full{position:fixed;inset:0;z-index:1000;height:auto;margin:0!important;border-radius:0}
+.viewer .vfs{position:absolute;top:8px;right:8px;z-index:2;height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:rgba(255,255,255,.92);color:#1c2830;font:600 .9rem/1 inherit;cursor:pointer}
 .viewer .hint{position:absolute;left:10px;bottom:8px;font-size:.8rem;color:var(--muted);pointer-events:none}
 .viewer .empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;color:var(--muted)}
 
@@ -290,6 +292,7 @@ details summary{cursor:pointer;font-weight:600}
     <canvas id="cv"></canvas>
     <div class="empty" id="viewerEmpty">Bir DXF dosyası seçin ya da örnek çizim açın.</div>
     <div class="hint" id="viewerHint" hidden>Sürükleyerek çevirin, iki parmakla yakınlaştırın</div>
+    <button type="button" class="vfs" id="viewerFs" aria-label="Tam ekran">⛶ Büyüt</button>
   </div>
   <div class="facts" id="facts" hidden></div>
 
@@ -2016,6 +2019,7 @@ const viewer = (() => {
     R.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); place();
   }
   new ResizeObserver(resize).observe(box);
+  $('#viewerFs').onclick = () => { const on = !box.classList.contains('full'); box.classList.toggle('full', on); document.body.style.overflow = on ? 'hidden' : ''; $('#viewerFs').textContent = on ? '✕ Kapat' : '⛶ Büyüt'; setTimeout(resize, 30); };
   function clear() {
     if (grp) { scene.remove(grp); grp.traverse(o => { o.geometry && o.geometry.dispose(); }); grp = null; }
     $('#viewerEmpty').hidden = false; $('#viewerHint').hidden = true; R.render(scene, cam);
