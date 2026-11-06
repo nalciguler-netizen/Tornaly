@@ -354,6 +354,15 @@
       }
       return { pid: null, w: [x, y] };
     }
+    function circ3(a, b, t) { // üç noktadan geçen çember: {c, r, ccw}  (ccw: a'dan b'ye saat tersine giderken t'den geçer mi)
+      const d = 2 * (a[0] * (b[1] - t[1]) + b[0] * (t[1] - a[1]) + t[0] * (a[1] - b[1]));
+      if (Math.abs(d) < 1e-9) return null;
+      const A = a[0] ** 2 + a[1] ** 2, B = b[0] ** 2 + b[1] ** 2, T = t[0] ** 2 + t[1] ** 2;
+      const cx = (A * (b[1] - t[1]) + B * (t[1] - a[1]) + T * (a[1] - b[1])) / d, cy = (A * (t[0] - b[0]) + B * (a[0] - t[0]) + T * (b[0] - a[0])) / d;
+      const ang = q => Math.atan2(q[1] - cy, q[0] - cx), n = x => ((x % TAU) + TAU) % TAU;
+      const sAB = n(ang(b) - ang(a)), sAT = n(ang(t) - ang(a));
+      return { c: [cx, cy], r: hyp(a[0] - cx, a[1] - cy), ccw: sAT < sAB };
+    }
     function addLine(s, e) {
       const a = pointAt(s.w, s.pid), b = pointAt(e.w, e.pid);
       if (a === b) return null;
@@ -531,6 +540,15 @@
         add(allAux ? 'Parça çizgisi yap' : 'Yardımcı çizgi yap', () => { commit(() => ents.forEach(([, e]) => { if (allAux) delete e.aux; else e.aux = true; }), { check: false }); clearSel(); });
       }
       if (sel.cons.size === 1 && M.cons[[...sel.cons][0]].v !== undefined) add('Değeri değiştir', () => editCons([...sel.cons][0]));
+      if (ents.length) add('Kopyala', () => {
+        const step = snapStep() * 5 || 10, map = {};
+        if (commit(() => {
+          const P = M.pts, dup = q => { if (q === 'o') return q; if (map[q]) return map[q]; const id = uid(M); P[id] = { x: P[q].x + step, y: P[q].y - step }; map[q] = id; return id; };
+          const nsel = new Set();
+          ents.forEach(([, e]) => { const id = uid(M), c = { ...e }; ['a', 'b', 'c'].forEach(k => { if (c[k] !== undefined) c[k] = dup(e[k]); }); M.ents[id] = c; nsel.add(id); });
+          sel = { pts: new Set(), ents: nsel, cons: new Set() };
+        }, { check: false })) { render(); toast('Kopyalandı: yeni öğeyi sürükleyerek yerine taşıyın'); }
+      });
       if (sel.pts.size || sel.ents.size || sel.cons.size) add('Sil', delSelected, 'del');
       return B;
     }
@@ -538,11 +556,11 @@
 
     /* ---- çizim ---- */
     const HELP = {
-      sel: 'Öğeye dokunarak seçin, noktayı sürükleyerek şekli değiştirin. Boş alanda kaydırın, iki parmakla yakınlaştırın.',
+      sel: 'Öğeye dokunarak seçin. Noktayı sürükleyince şekil değişir, çizgiyi ya da daireyi sürükleyince öğe (seçiliyse seçilenlerin hepsi) taşınır. Boş alanda kaydırın, iki parmakla yakınlaştırın.',
       line: 'Başlangıca dokunun, sonra sıradaki noktalara dokunun (ya da sürükleyin). Başlangıç noktasına dönünce şekil kapanır; zinciri yarıda bitirmek için son noktaya tekrar dokunun.',
       rect: 'İlk köşeye dokunun, karşı köşeye dokunun (ya da sürükleyin).',
       circle: 'Merkeze dokunun, sonra çevreye dokunun (ya da sürükleyin).',
-      arc: 'Yay merkezine, sonra başlangıç noktasına, sonra bitiş noktasına dokunun (saat yönünün tersine).',
+      arc: 'Yayın başlangıcına dokunun, sonra bitişine dokunun (ya da sürükleyin). Ardından parmağınızı kaydırarak yayın kavisini ayarlayın ve bırakın (ya da yayın geçeceği yere dokunun).',
       dim: 'Ölçülecek çizgiye/daireye dokunun ya da iki noktaya sırayla dokunun.',
     };
     function render() {
@@ -615,6 +633,18 @@
           const [cx, cy] = toS(...pv.c), r = hyp(pv.b[0] - pv.c[0], pv.b[1] - pv.c[1]);
           out.push(`<circle cx="${cx}" cy="${cy}" r="${r * view.k}" fill="none" stroke="var(--steel)" stroke-width="2" stroke-dasharray="6 4"/><text x="${cx}" y="${cy - r * view.k - 8}" text-anchor="middle" font-size="12" fill="var(--steel)">Ø${nf(2 * r, 1)}</text>`);
         } else if (pv.t === 'mark') { pv.pts.forEach(q => { const [x, y] = toS(...q); out.push(`<circle cx="${x}" cy="${y}" r="5" fill="var(--steel)"/>`); }); }
+        else if (pv.t === 'arc3') {
+          const k3 = circ3(pv.a, pv.b, pv.t3);
+          [pv.a, pv.b].forEach(q => { const [x, y] = toS(...q); out.push(`<circle cx="${x}" cy="${y}" r="5" fill="var(--steel)"/>`); });
+          if (!k3) { const [ax, ay] = toS(...pv.a), [bx, by] = toS(...pv.b); out.push(`<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="var(--steel)" stroke-width="2" stroke-dasharray="6 4"/>`); }
+          else {
+            const a0 = Math.atan2(pv.a[1] - k3.c[1], pv.a[0] - k3.c[0]), b0 = Math.atan2(pv.b[1] - k3.c[1], pv.b[0] - k3.c[0]);
+            let s0 = k3.ccw ? a0 : b0, sw = (((k3.ccw ? b0 - a0 : a0 - b0) % TAU) + TAU) % TAU; const pts = [];
+            for (let i = 0; i <= 64; i++) { const t = s0 + sw * i / 64; pts.push(toS(k3.c[0] + k3.r * Math.cos(t), k3.c[1] + k3.r * Math.sin(t)).map(v => v.toFixed(1)).join(',')); }
+            const [cx, cy] = toS(...k3.c), [tx, ty] = toS(...pv.t3);
+            out.push(`<polyline points="${pts.join(' ')}" fill="none" stroke="var(--steel)" stroke-width="2.4" stroke-dasharray="6 4"/><circle cx="${cx}" cy="${cy}" r="3" fill="none" stroke="var(--steel)"/><circle cx="${tx}" cy="${ty}" r="7" fill="none" stroke="var(--tape)" stroke-width="2"/><text x="${tx}" y="${ty - 12}" text-anchor="middle" font-size="12" fill="var(--steel)">R${nf(k3.r, 1)}</text>`);
+          }
+        }
       }
       svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
       svg.innerHTML = out.join('');
@@ -658,7 +688,17 @@
       if (tool === 'sel') {
         const pid = hitPoint(sx, sy);
         if (pid && pid !== 'o' && !M.pts[pid].fixed) gest.drag = pid;
+        else if (!pid) { // öğeyi taşı: seçiliyse tüm seçim, değilse dokunulan öğe
+          const eid = hitEnt(sx, sy, 16);
+          if (eid) {
+            const ids = sel.ents.has(eid) ? [...sel.ents] : [eid], set = new Set(sel.ents.has(eid) ? [...sel.pts] : []);
+            ids.forEach(id => { const e = M.ents[id]; ['a', 'b', 'c'].forEach(k => { if (e[k] !== undefined) set.add(e[k]); }); });
+            set.delete('o'); [...set].forEach(q => { if (!M.pts[q] || M.pts[q].fixed) set.delete(q); });
+            if (set.size) gest.move = { pts: [...set], w: toW(sx, sy) };
+          }
+        }
       }
+      if (tool === 'arc' && pend.length < 2) gest.start = snapWorld(sx, sy);
       if (tool === 'line' || tool === 'rect' || tool === 'circle') {
         gest.start = (tool === 'line' && pend.length) ? null : snapWorld(sx, sy);
       }
@@ -666,6 +706,7 @@
     svg.addEventListener('pointermove', ev => {
       if (!ptrs.has(ev.pointerId)) {
         if (ev.pointerType === 'mouse' && (tool === 'line' || tool === 'circle' || tool === 'rect') && pend.length) { const r = svg.getBoundingClientRect(); hover(ev.clientX - r.left, ev.clientY - r.top); }
+        if (ev.pointerType === 'mouse' && tool === 'arc' && pend.length) { const r = svg.getBoundingClientRect(), sx = ev.clientX - r.left, sy = ev.clientY - r.top; preview = pend.length === 2 ? { t: 'arc3', a: pend[0].w, b: pend[1].w, t3: toW(sx, sy) } : { t: 'line', a: pend[0].w, b: snapWorld(sx, sy, pend[0].w).w }; render(); }
         return;
       }
       const r = svg.getBoundingClientRect(), sx = ev.clientX - r.left, sy = ev.clientY - r.top;
@@ -681,9 +722,15 @@
       if (gest.t !== 'one') return;
       if (!gest.moved && hyp(sx - gest.sx0, sy - gest.sy0) > 8) {
         gest.moved = true;
-        if (gest.drag) snapshot();
+        if (gest.drag || gest.move) snapshot();
       }
       if (!gest.moved) return;
+      if (tool === 'sel' && gest.move) {
+        const w = toW(sx, sy), dx = w[0] - gest.move.w[0], dy = w[1] - gest.move.w[1]; gest.move.w = w;
+        gest.move.pts.forEach(q => { M.pts[q].x += dx; M.pts[q].y += dy; });
+        M.cons.forEach(k => { if (k.t === 'fix' && gest.move.pts.includes(k.p)) { k.x += dx; k.y += dy; } });
+        render(); return;
+      }
       if (tool === 'sel') {
         if (gest.drag) {
           const [x, y] = toW(sx, sy);
@@ -692,7 +739,12 @@
         } else { view.cx = gest.vx - (sx - gest.sx0) / view.k; view.cy = gest.vy + (sy - gest.sy0) / view.k; render(); }
         return;
       }
-      if (tool === 'dim' || tool === 'arc') { view.cx = gest.vx - (sx - gest.sx0) / view.k; view.cy = gest.vy + (sy - gest.sy0) / view.k; render(); return; }
+      if (tool === 'arc') {
+        if (pend.length === 2) { preview = { t: 'arc3', a: pend[0].w, b: pend[1].w, t3: toW(sx, sy) }; render(); return; }
+        const a = pend.length === 1 ? pend[0].w : gest.start && gest.start.w; if (!a) return;
+        preview = { t: 'line', a, b: snapWorld(sx, sy, a).w }; render(); return;
+      }
+      if (tool === 'dim') { view.cx = gest.vx - (sx - gest.sx0) / view.k; view.cy = gest.vy + (sy - gest.sy0) / view.k; render(); return; }
       hover(sx, sy, true);
     });
     function hover(sx, sy, dragging) {
@@ -712,6 +764,7 @@
       const g = gest; gest = null;
       if (ev.type === 'pointercancel') { preview = null; render(); return; }
       if (tool === 'sel') {
+        if (g.move && g.moved) { runSolve(); changed(); return; }
         if (g.drag && g.moved) { runSolve(); changed(); return; }
         if (g.moved) return;
         const pid0 = hitPoint(sx, sy, 12), near = pid0 ? null : hitEnt(sx, sy, 7), ci = pid0 || near ? -1 : hitLabel(sx, sy), pid = ci < 0 ? (pid0 || hitPoint(sx, sy, 16)) : null, eid = ci < 0 && !pid ? (near || hitEnt(sx, sy)) : null;
@@ -765,14 +818,22 @@
         render(); return;
       }
       if (tool === 'arc') {
-        if (g.moved) return;
-        const s = snapWorld(sx, sy);
-        pend.push(s);
-        if (pend.length < 3) { preview = { t: 'mark', pts: pend.map(q => q.w) }; render(); return; }
-        const [c, a, b] = pend; pend = []; preview = null;
-        const r0 = hyp(a.w[0] - c.w[0], a.w[1] - c.w[1]); if (r0 < 1e-6) { render(); return; }
-        const tb = Math.atan2(b.w[1] - c.w[1], b.w[0] - c.w[0]), bw = b.pid ? b.w : [c.w[0] + r0 * Math.cos(tb), c.w[1] + r0 * Math.sin(tb)];
-        commit(() => { const ci = pointAt(c.w, c.pid), ai = pointAt(a.w, a.pid), bi = pointAt(bw, b.pid), id = uid(M); if (ai !== bi) M.ents[id] = { t: 'arc', c: ci, a: ai, b: bi }; });
+        if (pend.length === 0) {
+          const st = g.start || snapWorld(g.sx0, g.sy0);
+          if (g.moved) { const en = snapWorld(sx, sy, st.w); if (hyp(en.w[0] - st.w[0], en.w[1] - st.w[1]) < 1e-6) { preview = null; render(); return; } pend = [st, en]; preview = { t: 'arc3', a: st.w, b: en.w, t3: [(st.w[0] + en.w[0]) / 2, (st.w[1] + en.w[1]) / 2] }; toast('Şimdi parmağınızı kaydırıp yayın kavisini ayarlayın'); render(); return; }
+          pend = [st]; preview = { t: 'mark', pts: [st.w] }; render(); return;
+        }
+        if (pend.length === 1) {
+          const en = snapWorld(sx, sy, pend[0].w); if (hyp(en.w[0] - pend[0].w[0], en.w[1] - pend[0].w[1]) < 1e-6) return;
+          pend.push(en); preview = { t: 'arc3', a: pend[0].w, b: en.w, t3: [(pend[0].w[0] + en.w[0]) / 2, (pend[0].w[1] + en.w[1]) / 2] }; render(); return;
+        }
+        const [A, B] = pend, T = toW(sx, sy), k3 = circ3(A.w, B.w, T);
+        if (!k3) { toast('Üç nokta aynı doğru üzerinde; yay için parmağınızı yana kaydırın'); return; }
+        pend = []; preview = null;
+        commit(() => {
+          const ai = pointAt(A.w, A.pid), bi = pointAt(B.w, B.pid), ci = pointAt(k3.c), id = uid(M);
+          if (ai !== bi) M.ents[id] = k3.ccw ? { t: 'arc', c: ci, a: ai, b: bi } : { t: 'arc', c: ci, a: bi, b: ai };
+        });
         render();
       }
     }

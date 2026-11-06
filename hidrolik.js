@@ -289,6 +289,122 @@
     return g.out;
   }
 
+  // Her zaman öne dönük, hiç kaybolmayan 3B yazı
+  function label3D(text, num, col = '#1c2830') {
+    const c = document.createElement('canvas'), x = c.getContext('2d'), fs = 40, font = `600 ${fs}px Barlow, Arial, sans-serif`;
+    x.font = font; const tw = x.measureText(text).width, nw = num ? fs + 10 : 0;
+    c.width = Math.ceil(tw + nw + 30); c.height = fs + 26; x.font = font;
+    x.fillStyle = 'rgba(255,255,255,.93)'; x.strokeStyle = col; x.lineWidth = 4;
+    const r = 14, W = c.width - 4, Hh = c.height - 4; x.beginPath(); x.moveTo(2 + r, 2); x.arcTo(2 + W, 2, 2 + W, 2 + Hh, r); x.arcTo(2 + W, 2 + Hh, 2, 2 + Hh, r); x.arcTo(2, 2 + Hh, 2, 2, r); x.arcTo(2, 2, 2 + W, 2, r); x.closePath(); x.fill(); x.stroke();
+    if (num) { x.fillStyle = '#a3262a'; x.beginPath(); x.arc(15 + fs / 2, c.height / 2, fs / 2, 0, PI * 2); x.fill(); x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(num, 15 + fs / 2, c.height / 2 + 2); }
+    x.fillStyle = '#1c2830'; x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillText(text, 15 + nw, c.height / 2 + 2);
+    const tex = new THREE.CanvasTexture(c); tex.minFilter = THREE.LinearFilter;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, depthWrite: false, sizeAttenuation: false, transparent: true }));
+    const h = 0.03; sp.scale.set(h * c.width / c.height, h, 1); sp.renderOrder = 999; return sp;
+  }
+  // Hidrolik sistem makinenin üzerinde: tank, pompa, valf, silindirler, hortumlar (kırmızı basınç, mavi dönüş), soğutucu, by-pass, termostat, akümülatör
+  function system3D(host, o) {
+    let ctl = null;
+    view3D(host, (grp, M) => {
+      const C = (c, op) => new THREE.MeshStandardMaterial(Object.assign({ color: c, metalness: 0.25, roughness: 0.55, side: THREE.DoubleSide }, op ? { transparent: true, opacity: op, depthWrite: false } : {}));
+      const RED = C(0xc0392b), BLUE = C(0x2b6aa3), GREY = C(0x55606a), YEL = C(0xf2b705), DARK = C(0x2b3238), ALU = C(0xb9c4cb), BRASS = M.brass, FADE = C(0x9aa5ad, 0.35);
+      const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+      const box = (w, h, d, mat, x, y, z, parent = grp) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); parent.add(m); return m; };
+      const cyl = (r, h, mat, x, y, z, rx = 0, rz = 0, parent = grp) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 24), mat); m.position.set(x, y, z); m.rotation.x = rx; m.rotation.z = rz; parent.add(m); return m; };
+      const seg = (a, b, r, mat, parent = grp) => { const d = b.clone().sub(a), L = d.length(); if (L < 1e-6) return; const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, L, 12), mat); along(m, a.clone().add(b).multiplyScalar(0.5), d); parent.add(m); };
+      const pipe = (pts, mat, r = 0.035, arrows = true, parent = grp) => {
+        for (let i = 1; i < pts.length; i++) seg(pts[i - 1], pts[i], r, mat, parent);
+        pts.forEach(p => { const sp = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), mat); sp.position.copy(p); parent.add(sp); });
+        if (arrows) for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i], d = b.clone().sub(a); if (d.length() < 0.35) continue; const cn = new THREE.Mesh(new THREE.ConeGeometry(r * 2.4, r * 5, 12), mat); along(cn, a.clone().lerp(b, 0.55), d); parent.add(cn); }
+      };
+      const lab = (t, p, num, parent = grp, anchor) => { const s_ = label3D(t, num); s_.position.copy(p); parent.add(s_);
+        if (anchor) { const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints([anchor, p]), new THREE.LineBasicMaterial({ color: 0x1c2830, depthTest: false, transparent: true, opacity: 0.75 })); ln.renderOrder = 998; parent.add(ln); }
+        return s_; };
+      // silindir: gövde + mil, iki nokta arasında (her harekette güncellenir)
+      const mkCyl = (rB, rR, parent = grp) => { const b = new THREE.Mesh(new THREE.CylinderGeometry(rB, rB, 1, 20), DARK), r = new THREE.Mesh(new THREE.CylinderGeometry(rR, rR, 1, 16), M.chrome); parent.add(b); parent.add(r); return { b, r, Lb: null }; };
+      const setCyl = (c, A, B) => { const d = B.clone().sub(A), L = d.length(); if (c.Lb === null) c.Lb = L * 0.62; const lb = Math.min(c.Lb, L * 0.95), m = A.clone().add(d.clone().normalize().multiplyScalar(lb));
+        c.b.scale.set(1, lb, 1); along(c.b, A.clone().add(m).multiplyScalar(0.5), d); c.r.scale.set(1, L - lb * 0.9, 1); along(c.r, m.clone().add(B).multiplyScalar(0.5).add(d.clone().normalize().multiplyScalar(-lb * 0.05)), d); };
+      const need = o.cooler, cMat = need ? ALU : FADE, ret = need ? BLUE : BLUE;
+      const W = (obj, v) => obj.localToWorld(v.clone()).sub(grp.position); // grp henüz kaydırılmadı; dünya = grp yerel
+      if (o.mode === 'mobil') {
+        // alt yürüyüş ve üst gövde (yarı saydam, içi görünsün)
+        box(4.2, 0.8, 0.6, DARK, 0, 0.4, 1.0); box(4.2, 0.8, 0.6, DARK, 0, 0.4, -1.0); box(1.4, 0.5, 1.4, GREY, 0, 0.95, 0);
+        box(3.6, 1.1, 2.5, C(0xf2b705, 0.22), -0.85, 1.75, 0); box(0.8, 1.2, 2.5, C(0x2b3238, 0.5), -2.75, 1.7, 0);
+        box(1.0, 1.25, 0.95, C(0x9fb3c0, 0.45), 0.35, 2.92, 0.75);
+        // bileşenler
+        box(0.75, 0.9, 0.7, C(0x8a99a3), -0.55, 1.75, -0.8); lab('Tank (yağ deposu)', V3(0.3, 3.55, -2.0), null, grp, V3(-0.55, 2.2, -0.8));
+        cyl(0.17, 0.5, RED, -1.55, 1.55, 0.25, 0, PI / 2); lab('Pompa', V3(-2.7, 0.55, 1.9), null, grp, V3(-1.55, 1.5, 0.25));
+        box(0.45, 0.32, 0.4, C(0x3f6b84), 0.35, 1.95, -0.45); lab('Valf bloğu', V3(1.4, 3.25, -1.7), null, grp, V3(0.35, 2.1, -0.45));
+        // soğutucu (arkada, motor radyatörünün yanında) + fan
+        box(0.12, 0.85, 0.85, cMat, -2.2, 1.75, 0.65); cyl(0.36, 0.1, need ? DARK : FADE, -2.32, 1.75, 0.65, 0, PI / 2);
+        lab(need ? 'Yağ soğutucusu' : 'Yağ soğutucusu (gerekmiyor)', V3(-3.7, 3.0, 1.3), need ? '1' : null, grp, V3(-2.2, 1.9, 0.65));
+        // termostat
+        cyl(0.05, 0.16, need ? RED : FADE, -0.55, 2.25, -0.55); if (need) { pipe([V3(-0.55, 2.33, -0.55), V3(-0.55, 2.5, -0.2), V3(-2.2, 2.5, 0.4), V3(-2.3, 2.15, 0.65)], C(0x111111), 0.012, false); }
+        lab(need ? 'Termostat' : 'Termostat (gerekmiyor)', V3(-1.3, 3.85, -1.7), need ? '4' : null, grp, V3(-0.55, 2.33, -0.55));
+        // akümülatör
+        if (o.acc) { const ac = new THREE.Group(); cyl(0.12, 0.45, M.red, 0, 0, 0, 0, 0, ac); const t1 = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 10), M.red); t1.position.y = 0.225; ac.add(t1); const t2 = t1.clone(); t2.position.y = -0.225; ac.add(t2); ac.position.set(0.85, 1.75, -0.95); grp.add(ac);
+          pipe([V3(0.85, 1.48, -0.95), V3(0.85, 1.48, -0.45), V3(0.57, 1.95, -0.45)], RED, 0.025); lab('Akümülatör (basınçlı yağ deposu)', V3(1.9, 0.7, -2.3), null, grp, V3(0.85, 1.6, -0.95)); }
+        // hortumlar: emiş (tank→pompa), basınç (pompa→valf), dönüş (valf→soğutucu→tank), by-pass
+        pipe([V3(-0.55, 1.35, -0.6), V3(-1.2, 1.35, -0.6), V3(-1.2, 1.4, 0.25), V3(-1.3, 1.55, 0.25)], BLUE, 0.045);
+        pipe([V3(-1.8, 1.55, 0.25), V3(-1.9, 2.15, 0.25), V3(0.0, 2.15, 0.0), V3(0.13, 2.0, -0.3)], RED);
+        pipe([V3(0.35, 1.78, -0.25), V3(0.35, 1.32, 0.25), V3(-1.9, 1.32, 0.25), V3(-2.15, 1.4, 0.35), V3(-2.15, 2.15, 0.35)], ret);
+        pipe([V3(-2.15, 1.35, 0.95), V3(-1.9, 1.32, 1.1), V3(-0.95, 1.32, 1.1), V3(-0.95, 1.4, -0.55), V3(-0.85, 1.6, -0.55)], ret);
+        if (need) { pipe([V3(-1.9, 1.32, 0.25), V3(-1.75, 1.18, 0.6), V3(-1.75, 1.18, 1.1), V3(-1.9, 1.32, 1.1)], BLUE, 0.025, false); box(0.12, 0.12, 0.2, BRASS, -1.75, 1.18, 0.85); lab('By-pass valf', V3(-3.3, 1.2, 2.1), '3', grp, V3(-1.75, 1.18, 0.85)); }
+        lab('Dönüş hattı', V3(-0.6, 0.4, 2.4), need ? '2' : null, grp, V3(-1.2, 1.32, 1.1));
+        lab('Basınç hattı', V3(-2.0, 3.45, 0.4), null, grp, V3(-1.0, 2.15, 0.15));
+        // ön kol: bom → arm → kova (kaydırıcılarla hareket eder)
+        const F = V3(0.75, 2.05, -0.35), boomG = new THREE.Group(); boomG.position.copy(F); grp.add(boomG);
+        box(3.9, 0.36, 0.4, YEL, 1.95, 0, 0, boomG);
+        const armG = new THREE.Group(); armG.position.set(3.9, 0, 0); boomG.add(armG); box(0.3, 0.3, 0.32, DARK, 0, 0, 0, armG);
+        box(2.4, 0.3, 0.32, YEL, 1.2, 0, 0, armG);
+        const bkG = new THREE.Group(); bkG.position.set(2.4, 0, 0); armG.add(bkG);
+        const bs = new THREE.Shape(); bs.moveTo(0, 0.12); bs.quadraticCurveTo(0.95, 0.35, 1.05, -0.55); bs.lineTo(0.75, -0.6); bs.quadraticCurveTo(0.45, -0.05, 0, -0.12); bs.lineTo(0, 0.12);
+        const bk = new THREE.Mesh(new THREE.ExtrudeGeometry(bs, { depth: 0.9, bevelEnabled: false }), DARK); bk.position.z = -0.45; bkG.add(bk);
+        const cB = mkCyl(0.085, 0.05), cA = mkCyl(0.08, 0.045), cK = mkCyl(0.07, 0.04);
+        lab('Bom', V3(1.8, 0.35, 0), null, boomG); lab('Arm', V3(1.3, 0.3, 0), null, armG); lab('Kova', V3(0.7, 0.3, 0), null, bkG);
+        const cbLab = lab('Bom silindiri', V3(0, 0, 0)), caLab = lab('Arm silindiri', V3(0, 0, 0)), ckLab = lab('Kova silindiri', V3(0, 0, 0));
+        // valften bom silindirine giden hortumlar (silindir tabanı gövdeye bağlı, sabit)
+        const CB0 = V3(1.15, 1.3, -0.35);
+        pipe([V3(0.45, 1.95, -0.3), V3(0.9, 1.6, -0.3), V3(1.12, 1.38, -0.33)], RED, 0.028);
+        pipe([V3(1.2, 1.5, -0.42), V3(0.95, 1.75, -0.6), V3(0.45, 1.9, -0.6)], BLUE, 0.028);
+        const set = e => { // e: [bom, arm, kova] 0..1
+          boomG.rotation.z = (-12 + 62 * e[0]) * PI / 180; armG.rotation.z = (-155 + 110 * e[1]) * PI / 180; bkG.rotation.z = (-115 + 140 * e[2]) * PI / 180;
+          grp.updateMatrixWorld(true);
+          const loc = (g_, v) => grp.worldToLocal(g_.localToWorld(v.clone()));
+          const P1 = loc(boomG, V3(1.5, -0.26, 0)); setCyl(cB, CB0, P1);
+          const A0 = loc(boomG, V3(1.9, 0.3, 0)), A1 = loc(armG, V3(-0.55, 0.32, 0)); setCyl(cA, A0, A1);
+          const K0 = loc(armG, V3(0.4, 0.25, 0)), K1 = loc(bkG, V3(0.15, 0.3, 0)); setCyl(cK, K0, K1);
+          cbLab.position.copy(CB0.clone().lerp(P1, 0.5)).add(V3(0.7, -0.75, 0.9)); caLab.position.copy(A0.clone().lerp(A1, 0.5)).add(V3(0, 0.3, 0)); ckLab.position.copy(K0.clone().lerp(K1, 0.5)).add(V3(0.1, 0.25, 0));
+        };
+        set(o.e || [0.55, 0.55, 0.5]);
+        ctl = { set, names: ['Bom silindiri', 'Arm silindiri', 'Kova silindiri'] };
+        return { view: 'sys-m', th: 0.62, ph: 1.0, fit: 0.8 };
+      }
+      // sabit: hidrolik pres + güç ünitesi
+      box(1.8, 0.15, 1.0, GREY, 0, 0.95, 0); [-0.75, 0.75].forEach(x => box(0.18, 2.4, 0.18, GREY, x, 1.95, 0)); box(1.8, 0.35, 1.0, GREY, 0, 3.15, 0); box(1.6, 0.9, 0.9, GREY, 0, 0.45, 0);
+        lab('Hidrolik pres', V3(-0.9, 3.75, 0));
+      const pc = mkCyl(0.2, 0.11), plate = box(1.3, 0.12, 0.8, C(0x8a99a3), 0, 2.2, 0); const pLab = lab('Pres silindiri', V3(0.95, 2.7, 0.55));
+      // güç ünitesi
+      box(1.3, 0.75, 0.8, C(0x8a99a3), 2.3, 0.375, 0); lab('Tank (yağ deposu)', V3(2.4, -0.2, 1.1), null, grp, V3(2.3, 0.3, 0.4));
+      cyl(0.2, 0.55, DARK, 2.05, 0.98, 0, 0, PI / 2); lab('Elektrik motoru', V3(1.3, 1.6, 0.4), null, grp, V3(2.05, 1.1, 0)); cyl(0.12, 0.3, RED, 2.5, 0.98, 0, 0, PI / 2); lab('Pompa', V3(1.7, 2.25, -0.9), null, grp, V3(2.5, 1.05, 0));
+      box(0.4, 0.3, 0.35, C(0x3f6b84), 2.75, 0.95, 0.25); lab('Valf bloğu', V3(3.3, 0.35, 1.0), null, grp, V3(2.75, 0.95, 0.35));
+      box(0.12, 0.8, 0.8, cMat, 3.3, 0.6, -0.1); cyl(0.33, 0.1, need ? DARK : FADE, 3.42, 0.6, -0.1, 0, PI / 2); lab(need ? 'Yağ soğutucusu' : 'Yağ soğutucusu (gerekmiyor)', V3(4.1, 1.5, -0.6), need ? '1' : null, grp, V3(3.3, 0.9, -0.1));
+      cyl(0.04, 0.14, need ? RED : FADE, 1.85, 0.6, 0.42, PI / 2); if (need) pipe([V3(1.85, 0.6, 0.5), V3(1.85, 0.3, 0.6), V3(3.2, 0.3, 0.6), V3(3.38, 0.5, -0.1)], C(0x111111), 0.01, false);
+      lab(need ? 'Termostat' : 'Termostat (gerekmiyor)', V3(1.0, 0.9, 1.3), need ? '4' : null, grp, V3(1.85, 0.6, 0.48));
+      if (o.acc) { const ac = new THREE.Group(); cyl(0.11, 0.42, M.red, 0, 0, 0, 0, 0, ac); const t1 = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 10), M.red); t1.position.y = 0.21; ac.add(t1); ac.position.set(2.95, 1.45, -0.25); grp.add(ac); pipe([V3(2.95, 1.2, -0.25), V3(2.8, 1.05, 0.15)], RED, 0.022); lab('Akümülatör (basınçlı yağ deposu)', V3(3.9, 2.4, -0.7), null, grp, V3(2.95, 1.6, -0.25)); }
+      pipe([V3(2.55, 1.1, 0.25), V3(2.55, 3.55, 0.25), V3(0.3, 3.55, 0.25), V3(0.12, 3.35, 0.1)], RED); lab('Basınç hattı', V3(1.5, 4.0, 0.6), null, grp, V3(1.5, 3.55, 0.25));
+      pipe([V3(-0.12, 3.35, -0.1), V3(-0.3, 3.5, -0.3), V3(2.9, 3.5, -0.3), V3(2.9, 1.15, -0.1)], BLUE, 0.03);
+      pipe([V3(2.95, 0.85, 0.1), V3(3.2, 0.95, -0.1)], ret, 0.03); pipe([V3(3.2, 0.25, -0.1), V3(2.95, 0.2, -0.1), V3(2.95, 0.6, -0.1)], ret, 0.03);
+      if (need) { pipe([V3(3.15, 0.95, -0.55), V3(3.15, 0.25, -0.55)], BLUE, 0.022, false); box(0.12, 0.18, 0.12, BRASS, 3.15, 0.6, -0.55); lab('By-pass valf', V3(3.9, 0.15, -0.9), '3', grp, V3(3.15, 0.6, -0.55)); }
+      lab('Dönüş hattı', V3(1.9, 2.7, -1.1), need ? '2' : null, grp, V3(1.9, 3.5, -0.3));
+      const set = e => { const y = 2.95 - 1.55 * e[0]; plate.position.y = y - 0.12; setCyl(pc, V3(0, 3.35, 0), V3(0, y, 0)); };
+      set(o.e || [0.4]);
+      ctl = { set, names: ['Pres silindiri'] };
+      return { view: 'sys-s', th: 0.55, ph: 1.2, fit: 0.95 };
+    }, 300);
+    return { set: e => { if (ctl) { ctl.set(e); place(); } }, names: ctl ? ctl.names : [] };
+  }
+
   // Pim bağlantısı: sabit çatal (iki yan kulak), hareketli göz, burç halkası, pim
   function pim3D(host, g) {
     view3D(host, (grp, M) => {
@@ -598,7 +714,13 @@
         accS = s || 0; top += '';
         r.accTxt = `Akümülatör <b>${s ? s + ' litre' : 'çok büyük'}</b>, azot ${f(a0 - 1, 0)} bar`;
       }
-      if (Vt) { const dm = tank3D($('#hy3d'), { V: Vt, acc: accS }); top = card('Tank', `${f(Vt, 0)} litre`, [`Ölçü ~<b>${f(dm.Lx, 0)} × ${f(dm.Wz, 0)} × ${f(dm.Hy, 0)} mm</b>`].concat(r.accTxt ? [r.accTxt] : [])) +
+      if (Vt) { const sv = Math.max(10, Vt) / 1000, s_ = Math.cbrt(sv / 1.44) * 1000, dm = { Lx: 1.6 * s_, Wz: s_, Hy: 0.9 * s_ };
+        const mode = num(v.tip) >= 3 ? 'sabit' : 'mobil', ek = 'hyd.sys.' + mode, e0 = H().store.get(ek, null);
+        const sys = system3D($('#hy3d'), { mode, cooler: cool > 0, acc: accS > 0, e: e0 || undefined });
+        $('#hySl').innerHTML = sys.names.map((n, i) => `<label class="f" style="margin-top:4px"><span>${n} — aç / kapat</span><input type="range" min="0" max="1000" value="${Math.round(((e0 || (mode === 'mobil' ? [0.55, 0.55, 0.5] : [0.4]))[i]) * 1000)}" data-se="${i}" style="width:100%"></label>`).join('');
+        $('#hySl').querySelectorAll('[data-se]').forEach(inp => inp.oninput = () => { const e = [...$('#hySl').querySelectorAll('[data-se]')].map(x => x.value / 1000); sys.set(e); H().store.set(ek, e); });
+        $('#hyLeg').innerHTML = `<p class="note" style="margin:4px 0 8px">Resim: ${mode === 'mobil' ? 'ekskavatörde' : 'hidrolik preste'} hidrolik sistem. <b style="color:#c0392b">Kırmızı hortum</b> = pompadan silindire giden basınçlı yağ, <b style="color:#2b6aa3">mavi hortum</b> = tanka dönen yağ; oklar akış yönü. Parmakla çevirip bakın, kaydırıcılarla silindirleri hareket ettirin.${cool > 0 ? ' Kırmızı daire içindeki numaralar aşağıdaki "Ne yapmalı?" adımlarıdır.' : ''} Makine seçimi için yukarıdaki "Makine" alanını değiştirin.</p>`;
+        top = card('Tank', `${f(Vt, 0)} litre`, [`Ölçü ~<b>${f(dm.Lx, 0)} × ${f(dm.Wz, 0)} × ${f(dm.Hy, 0)} mm</b>`].concat(r.accTxt ? [r.accTxt] : [])) +
         chk([[cool === 0, cool === 0 ? 'Tank yağı soğutmaya yeter, ayrıca soğutucu gerekmez' : `Yağ soğutucusu gerekli: yaklaşık ${f(cool, 1)} kW`]]);
         if (cool > 0) { const dTx = ok(v.dT) ? v.dT : 30, Pl = ok(v.Pin) ? v.Pin * (v.kay || 25) / 100 : 0, Vno = Math.pow(Pl * 1000 / (12 * 0.065 * dTx), 1.5);
           top += `<div style="background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--err);border-radius:var(--r-s);padding:10px 12px;margin:8px 0;font-size:.92rem;line-height:1.45">
@@ -612,7 +734,7 @@
             <p class="note" style="margin:6px 0 0">Soğutucusuz çözüm için tank yaklaşık ${f(Vno, 0)} litre olmalıydı; bu pratik değildir, soğutucu daha ucuzdur.</p></div>`; } }
       out.innerHTML = r.length ? top + det(kv(r) + '<p class="note">Tank yüzey alanı A ≈ 0,065·V^(2/3) ve ısı geçişi ~12 W/m²K varsayımıyla kaba hesaptır. Akümülatör: Boyle–Mariotte, mutlak basınçlarla.</p>') : warnP('Değerleri girin.');
     });
-    root.innerHTML = '<div id="hy3d" style="margin-bottom:6px"></div>' + F.html + '<div id="hyOut"></div>'; F.bind(root);
+    root.innerHTML = '<div id="hy3d"></div><div id="hySl"></div><div id="hyLeg"></div>' + F.html + '<div id="hyOut"></div>'; F.bind(root);
   });
 
   /* ---------- 7. Valf boyutu ---------- */
